@@ -307,6 +307,161 @@ def find_nearest_peak(
     return result
 
 
+
+def assign_wells(comparison: pd.DataFrame) -> pd.DataFrame:
+    """
+    Assign samples sequentially across a standard 96-well plate:
+    A1-A12, then B1-B12, through H12.
+    """
+    wells = [f"{row}{column}" for row in "ABCDEFGH" for column in range(1, 13)]
+    assigned = comparison.copy()
+    assigned["Well"] = wells[: len(assigned)]
+    return assigned
+
+
+def draw_96_well_plate(
+    plate_data: pd.DataFrame,
+    value_column: str,
+    target_rt: float,
+):
+    rows = list("ABCDEFGH")
+    columns = list(range(1, 13))
+
+    values = pd.to_numeric(plate_data[value_column], errors="coerce")
+    valid_values = values.dropna()
+
+    if valid_values.empty:
+        minimum = 0.0
+        maximum = 1.0
+    else:
+        minimum = float(valid_values.min())
+        maximum = float(valid_values.max())
+        if maximum == minimum:
+            maximum = minimum + 1.0
+
+    fig, ax = plt.subplots(figsize=(15, 8))
+
+    plate_lookup = plate_data.set_index("Well").to_dict("index")
+
+    for row_index, row in enumerate(rows):
+        for column_index, column in enumerate(columns):
+            well = f"{row}{column}"
+            x = column_index
+            y = 7 - row_index
+
+            record = plate_lookup.get(well)
+
+            if record is None:
+                face_value = 0.0
+                circle = plt.Circle(
+                    (x, y),
+                    0.38,
+                    facecolor="#f1f3f5",
+                    edgecolor="#b7bec7",
+                    linewidth=1.2,
+                )
+                ax.add_patch(circle)
+                ax.text(
+                    x,
+                    y,
+                    well,
+                    ha="center",
+                    va="center",
+                    fontsize=8,
+                    color="#7a828c",
+                )
+                continue
+
+            raw_value = record.get(value_column)
+            matched = bool(record.get("Matched", False))
+            numeric_value = pd.to_numeric(
+                pd.Series([raw_value]),
+                errors="coerce",
+            ).iloc[0]
+
+            if matched and pd.notna(numeric_value):
+                normalized = (float(numeric_value) - minimum) / (maximum - minimum)
+                facecolor = plt.cm.YlOrRd(0.2 + 0.8 * normalized)
+            else:
+                facecolor = "#d9dde3"
+
+            circle = plt.Circle(
+                (x, y),
+                0.38,
+                facecolor=facecolor,
+                edgecolor="#545b66",
+                linewidth=1.4,
+            )
+            ax.add_patch(circle)
+
+            sample_name = str(record.get("Sample name", ""))
+            short_name = sample_name if len(sample_name) <= 15 else sample_name[:13] + "…"
+
+            ax.text(
+                x,
+                y + 0.10,
+                well,
+                ha="center",
+                va="center",
+                fontsize=8,
+                fontweight="bold",
+            )
+            ax.text(
+                x,
+                y - 0.05,
+                short_name,
+                ha="center",
+                va="center",
+                fontsize=6.5,
+            )
+
+            if pd.notna(numeric_value):
+                ax.text(
+                    x,
+                    y - 0.20,
+                    f"{float(numeric_value):,.1f}",
+                    ha="center",
+                    va="center",
+                    fontsize=6.5,
+                    fontweight="bold",
+                )
+
+    ax.set_xlim(-0.7, 11.7)
+    ax.set_ylim(-0.7, 7.7)
+    ax.set_aspect("equal")
+    ax.set_xticks(range(12))
+    ax.set_xticklabels(columns, fontsize=11, fontweight="bold")
+    ax.xaxis.tick_top()
+    ax.set_yticks(range(8))
+    ax.set_yticklabels(rows[::-1], fontsize=11, fontweight="bold")
+    ax.tick_params(length=0)
+    ax.set_title(
+        f"96-well plate — {value_column} near {target_rt:.3f} min",
+        fontsize=16,
+        fontweight="bold",
+        pad=22,
+    )
+
+    for spine in ax.spines.values():
+        spine.set_visible(False)
+
+    scalar_map = plt.cm.ScalarMappable(
+        cmap=plt.cm.YlOrRd,
+        norm=plt.Normalize(vmin=minimum, vmax=maximum),
+    )
+    scalar_map.set_array([])
+    colorbar = fig.colorbar(
+        scalar_map,
+        ax=ax,
+        fraction=0.025,
+        pad=0.03,
+    )
+    colorbar.set_label(value_column)
+
+    fig.tight_layout()
+    return fig
+
+
 def make_export_table(comparison: pd.DataFrame) -> bytes:
     return comparison.to_csv(index=False).encode("utf-8")
 
@@ -353,44 +508,11 @@ uploaded = st.file_uploader(
     type=["txt", "tsv", "csv"],
 )
 
-default_text = """260528 Film Comparison
+if uploaded is None:
+    st.info("Upload a peak report file to begin.")
+    st.stop()
 
-Sample 1: Film 1 (old film)
-#\tName\tSignal description\tRT (min)\tArea (mAU·s)\tArea%\tHeight (mAU)\tHeight%\tAmount\tConcentration\tStart time (min)\tEnd time (min)
-1\t\tVWD1A,Wavelength=190 nm\t0.986\t11249.323\t14.489\t1279.262\t36.87\t\t\t0.692\t1.394
-2\t\tVWD1A,Wavelength=190 nm\t1.529\t993.313\t1.279\t93.456\t2.69\t\t\t1.394\t1.744
-3\t\tVWD1A,Wavelength=190 nm\t2.027\t77.896\t0.100\t2.409\t0.07\t\t\t1.744\t2.353
-4\t\tVWD1A,Wavelength=190 nm\t2.586\t97.464\t0.126\t4.098\t0.12\t\t\t2.353\t3.269
-5\t\tVWD1A,Wavelength=190 nm\t7.619\t450.264\t0.580\t53.751\t1.55\t\t\t7.352\t7.622
-6\t\tVWD1A,Wavelength=190 nm\t7.732\t697.076\t0.898\t137.709\t3.97\t\t\t7.622\t7.737
-7\t\tVWD1A,Wavelength=190 nm\t7.842\t15510.247\t19.976\t1263.822\t36.42\t\t\t7.737\t8.218
-8\t\tVWD1A,Wavelength=190 nm\t8.830\t14686.187\t18.915\t317.620\t9.15\t\t\t8.218\t9.039
-9\t\tVWD1A,Wavelength=190 nm\t9.282\t33880.923\t43.637\t317.560\t9.15\t\t\t9.039\t11.999
-
-Sample 2: Film 1, 500 nM UC5
-#\tName\tSignal description\tRT (min)\tArea (mAU·s)\tArea%\tHeight (mAU)\tHeight%\tAmount\tConcentration\tStart time (min)\tEnd time (min)
-1\t\tVWD1A,Wavelength=190 nm\t0.985\t10994.254\t14.576\t1257.009\t35.77\t\t\t0.689\t1.391
-2\t\tVWD1A,Wavelength=190 nm\t1.528\t957.727\t1.270\t89.454\t2.55\t\t\t1.391\t1.746
-3\t\tVWD1A,Wavelength=190 nm\t2.581\t52.574\t0.070\t3.051\t0.09\t\t\t2.342\t3.193
-4\t\tVWD1A,Wavelength=190 nm\t7.524\t1437.041\t1.905\t183.906\t5.23\t\t\t7.364\t7.622
-5\t\tVWD1A,Wavelength=190 nm\t7.715\t1137.091\t1.508\t216.677\t6.17\t\t\t7.622\t7.736
-6\t\tVWD1A,Wavelength=190 nm\t7.835\t12782.161\t16.946\t1144.666\t32.57\t\t\t7.736\t8.186
-7\t\tVWD1A,Wavelength=190 nm\t8.834\t14053.896\t18.632\t305.839\t8.70\t\t\t8.186\t9.010
-8\t\tVWD1A,Wavelength=190 nm\t9.283\t34012.743\t45.093\t313.763\t8.93\t\t\t9.010\t11.996
-"""
-
-if uploaded is not None:
-    input_text = uploaded.getvalue().decode("utf-8", errors="replace")
-else:
-    input_text = st.text_area(
-        "Paste peak report text",
-        value=default_text,
-        height=420,
-        help=(
-            "Each sample section should begin with 'Sample N: name', followed "
-            "by the peak table."
-        ),
-    )
+input_text = uploaded.getvalue().decode("utf-8", errors="replace")
 
 
 # --------------------------------------------------
@@ -514,55 +636,7 @@ if "peak_comparison" in st.session_state:
 
     matched = comparison[comparison["Matched"] == True].copy()
 
-    if len(matched) >= 2:
-        first = matched.iloc[0]
-
-        st.markdown("### Change relative to the first matched sample")
-
-        relative = matched[
-            [
-                "Sample",
-                "Sample name",
-                "Area (mAU·s)",
-                "Area%",
-                "Height (mAU)",
-                "Height%",
-            ]
-        ].copy()
-
-        for metric in [
-            "Area (mAU·s)",
-            "Area%",
-            "Height (mAU)",
-            "Height%",
-        ]:
-            baseline = first[metric]
-
-            if pd.notna(baseline) and baseline != 0:
-                relative[f"{metric} change (%)"] = (
-                    (relative[metric] - baseline) / baseline * 100
-                )
-            else:
-                relative[f"{metric} change (%)"] = pd.NA
-
-        st.dataframe(
-            relative.style.format(
-                {
-                    "Area (mAU·s)": "{:,.3f}",
-                    "Area%": "{:.3f}",
-                    "Height (mAU)": "{:,.3f}",
-                    "Height%": "{:.3f}",
-                    "Area (mAU·s) change (%)": "{:+.1f}%",
-                    "Area% change (%)": "{:+.1f}%",
-                    "Height (mAU) change (%)": "{:+.1f}%",
-                    "Height% change (%)": "{:+.1f}%",
-                },
-                na_rep="—",
-            ),
-            use_container_width=True,
-            hide_index=True,
-        )
-
+    if len(matched) >= 1:
         st.markdown("### Comparison plots")
 
         chart_data = matched.copy()
@@ -570,27 +644,112 @@ if "peak_comparison" in st.session_state:
             chart_data["Sample"] + ": " + chart_data["Sample name"]
         )
 
+        x_positions = list(range(len(chart_data)))
+
         fig, ax = plt.subplots(figsize=(10, 5))
-        ax.bar(chart_data["Label"], chart_data["Area (mAU·s)"])
+        ax.scatter(
+            x_positions,
+            chart_data["Area (mAU·s)"],
+            s=95,
+        )
         ax.set_ylabel("Area (mAU·s)")
         ax.set_title(
             f"Peak area near {results['target_rt']:.3f} min"
         )
-        ax.tick_params(axis="x", rotation=25)
+        ax.set_xticks(x_positions)
+        ax.set_xticklabels(chart_data["Label"], rotation=25, ha="right")
+        ax.grid(True, axis="y", alpha=0.3)
+
+        for x, value in zip(x_positions, chart_data["Area (mAU·s)"]):
+            if pd.notna(value):
+                ax.annotate(
+                    f"{value:,.1f}",
+                    (x, value),
+                    xytext=(0, 8),
+                    textcoords="offset points",
+                    ha="center",
+                    fontsize=9,
+                )
+
         fig.tight_layout()
         st.pyplot(fig, use_container_width=True)
         plt.close(fig)
 
         fig, ax = plt.subplots(figsize=(10, 5))
-        ax.bar(chart_data["Label"], chart_data["Height (mAU)"])
+        ax.scatter(
+            x_positions,
+            chart_data["Height (mAU)"],
+            s=95,
+        )
         ax.set_ylabel("Height (mAU)")
         ax.set_title(
             f"Peak height near {results['target_rt']:.3f} min"
         )
-        ax.tick_params(axis="x", rotation=25)
+        ax.set_xticks(x_positions)
+        ax.set_xticklabels(chart_data["Label"], rotation=25, ha="right")
+        ax.grid(True, axis="y", alpha=0.3)
+
+        for x, value in zip(x_positions, chart_data["Height (mAU)"]):
+            if pd.notna(value):
+                ax.annotate(
+                    f"{value:,.1f}",
+                    (x, value),
+                    xytext=(0, 8),
+                    textcoords="offset points",
+                    ha="center",
+                    fontsize=9,
+                )
+
         fig.tight_layout()
         st.pyplot(fig, use_container_width=True)
         plt.close(fig)
+
+    st.markdown("### 96-well plate")
+
+    plate_metric = st.selectbox(
+        "Colour wells by",
+        options=["Area (mAU·s)", "Height (mAU)", "Area%", "Height%"],
+        index=0,
+        help="The sample with the highest selected peak value is shown with the darkest colour.",
+    )
+
+    plate_data = assign_wells(comparison)
+
+    st.caption(
+        "Samples are filled sequentially from A1 to A12, then B1 to B12, through H12. "
+        "Grey wells are empty or have no accepted peak match."
+    )
+
+    plate_figure = draw_96_well_plate(
+        plate_data=plate_data,
+        value_column=plate_metric,
+        target_rt=results["target_rt"],
+    )
+    st.pyplot(plate_figure, use_container_width=True)
+    plt.close(plate_figure)
+
+    plate_table = plate_data[
+        [
+            "Well",
+            "Sample",
+            "Sample name",
+            "Matched",
+            "RT (min)",
+            plate_metric,
+        ]
+    ].copy()
+
+    st.dataframe(
+        plate_table.style.format(
+            {
+                "RT (min)": "{:.3f}",
+                plate_metric: "{:,.3f}",
+            },
+            na_rep="—",
+        ),
+        use_container_width=True,
+        hide_index=True,
+    )
 
     st.markdown("### Peaks around the target region")
 
