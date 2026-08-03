@@ -555,252 +555,57 @@ if st.button(
 if "peak_comparison" in st.session_state:
     results = st.session_state["peak_comparison"]
     comparison = results["comparison"].copy()
-    parsed_samples = results["samples"]
 
     st.subheader(results["title"])
     st.write(
-        f"Nearest peaks to **{results['target_rt']:.3f} min** "
+        f"Peak nearest to **{results['target_rt']:.3f} min** "
         f"using a tolerance of **±{results['tolerance']:.3f} min**."
-    )
-
-    matched_count = int(comparison["Matched"].fillna(False).sum())
-    st.info(
-        f"Matched {matched_count} of {len(comparison)} samples within the selected tolerance."
-    )
-
-    card_columns = st.columns(min(len(comparison), 4))
-
-    for index, (_, row) in enumerate(comparison.iterrows()):
-        column = card_columns[index % len(card_columns)]
-
-        with column:
-            if bool(row.get("Matched", False)):
-                area_value = row.get("Area (mAU·s)")
-                rt_value = row.get("RT (min)")
-
-                st.markdown(
-                    f"""
-                    <div class="metric-card">
-                      <div class="sample-name">{row['Sample']}: {row['Sample name']}</div>
-                      <div class="peak-value">{rt_value:.3f} min</div>
-                      <div class="peak-label">Matched retention time</div>
-                      <div style="margin-top:0.7rem;font-size:1.2rem;font-weight:750;">
-                        Area: {area_value:,.3f}
-                      </div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
-            else:
-                st.warning(
-                    f"**{row['Sample']}: {row['Sample name']}**\n\n"
-                    f"{row.get('Reason', 'No matching peak')}"
-                )
-
-    st.markdown("### Peak comparison table")
-
-    display_columns = [
-        "Sample",
-        "Sample name",
-        "Matched",
-        "Peak #",
-        "RT (min)",
-        "RT difference",
-        "Area (mAU·s)",
-        "Area%",
-        "Height (mAU)",
-        "Height%",
-        "Start time (min)",
-        "End time (min)",
-    ]
-
-    display_table = comparison.reindex(columns=display_columns).copy()
-
-    st.dataframe(
-        display_table.style.format(
-            {
-                "RT (min)": "{:.3f}",
-                "RT difference": "{:.3f}",
-                "Area (mAU·s)": "{:,.3f}",
-                "Area%": "{:.3f}",
-                "Height (mAU)": "{:,.3f}",
-                "Height%": "{:.3f}",
-                "Start time (min)": "{:.3f}",
-                "End time (min)": "{:.3f}",
-            },
-            na_rep="—",
-        ),
-        use_container_width=True,
-        hide_index=True,
-    )
-
-    matched = comparison[comparison["Matched"] == True].copy()
-
-    if len(matched) >= 1:
-        st.markdown("### Comparison plots")
-
-        chart_data = matched.copy()
-        chart_data["Label"] = (
-            chart_data["Sample"] + ": " + chart_data["Sample name"]
-        )
-
-        x_positions = list(range(len(chart_data)))
-
-        fig, ax = plt.subplots(figsize=(10, 5))
-        ax.scatter(
-            x_positions,
-            chart_data["Area (mAU·s)"],
-            s=95,
-        )
-        ax.set_ylabel("Area (mAU·s)")
-        ax.set_title(
-            f"Peak area near {results['target_rt']:.3f} min"
-        )
-        ax.set_xticks(x_positions)
-        ax.set_xticklabels(chart_data["Label"], rotation=25, ha="right")
-        ax.grid(True, axis="y", alpha=0.3)
-
-        for x, value in zip(x_positions, chart_data["Area (mAU·s)"]):
-            if pd.notna(value):
-                ax.annotate(
-                    f"{value:,.1f}",
-                    (x, value),
-                    xytext=(0, 8),
-                    textcoords="offset points",
-                    ha="center",
-                    fontsize=9,
-                )
-
-        fig.tight_layout()
-        st.pyplot(fig, use_container_width=True)
-        plt.close(fig)
-
-        fig, ax = plt.subplots(figsize=(10, 5))
-        ax.scatter(
-            x_positions,
-            chart_data["Height (mAU)"],
-            s=95,
-        )
-        ax.set_ylabel("Height (mAU)")
-        ax.set_title(
-            f"Peak height near {results['target_rt']:.3f} min"
-        )
-        ax.set_xticks(x_positions)
-        ax.set_xticklabels(chart_data["Label"], rotation=25, ha="right")
-        ax.grid(True, axis="y", alpha=0.3)
-
-        for x, value in zip(x_positions, chart_data["Height (mAU)"]):
-            if pd.notna(value):
-                ax.annotate(
-                    f"{value:,.1f}",
-                    (x, value),
-                    xytext=(0, 8),
-                    textcoords="offset points",
-                    ha="center",
-                    fontsize=9,
-                )
-
-        fig.tight_layout()
-        st.pyplot(fig, use_container_width=True)
-        plt.close(fig)
-
-    st.markdown("### 96-well plate")
-
-    plate_metric = st.selectbox(
-        "Colour wells by",
-        options=["Area (mAU·s)", "Height (mAU)", "Area%", "Height%"],
-        index=0,
-        help="The sample with the highest selected peak value is shown with the darkest colour.",
     )
 
     plate_data = assign_wells(comparison)
 
-    st.caption(
-        "Samples are filled sequentially from A1 to A12, then B1 to B12, through H12. "
-        "Grey wells are empty or have no accepted peak match."
-    )
-
+    # Fixed display: colour wells by matched peak area.
     plate_figure = draw_96_well_plate(
         plate_data=plate_data,
-        value_column=plate_metric,
+        value_column="Area (mAU·s)",
         target_rt=results["target_rt"],
     )
     st.pyplot(plate_figure, use_container_width=True)
     plt.close(plate_figure)
 
-    plate_table = plate_data[
+    st.caption(
+        "Samples are assigned sequentially from A1 to A12, then B1 to B12. "
+        "Darker wells have a larger matched peak area. Grey wells have no accepted match."
+    )
+
+    st.markdown("### Results")
+
+    basic_table = plate_data[
         [
             "Well",
-            "Sample",
             "Sample name",
-            "Matched",
             "RT (min)",
-            plate_metric,
+            "Area (mAU·s)",
+            "Area%",
+            "Height (mAU)",
+            "Height%",
         ]
     ].copy()
 
     st.dataframe(
-        plate_table.style.format(
+        basic_table.style.format(
             {
                 "RT (min)": "{:.3f}",
-                plate_metric: "{:,.3f}",
+                "Area (mAU·s)": "{:,.3f}",
+                "Area%": "{:.3f}",
+                "Height (mAU)": "{:,.3f}",
+                "Height%": "{:.3f}",
             },
             na_rep="—",
         ),
         use_container_width=True,
         hide_index=True,
     )
-
-    st.markdown("### Peaks around the target region")
-
-    lower_bound = results["target_rt"] - results["tolerance"]
-    upper_bound = results["target_rt"] + results["tolerance"]
-
-    nearby_tables = []
-    for sample in parsed_samples:
-        nearby = sample.peaks[
-            sample.peaks["RT (min)"].between(
-                lower_bound,
-                upper_bound,
-                inclusive="both",
-            )
-        ].copy()
-
-        if not nearby.empty:
-            nearby_tables.append(nearby)
-
-    if nearby_tables:
-        nearby_all = pd.concat(nearby_tables, ignore_index=True)
-
-        nearby_display = nearby_all[
-            [
-                "Sample",
-                "Sample name",
-                "#",
-                "RT (min)",
-                "Area (mAU·s)",
-                "Area%",
-                "Height (mAU)",
-                "Height%",
-            ]
-        ].sort_values(["Sample", "RT (min)"])
-
-        st.dataframe(
-            nearby_display.style.format(
-                {
-                    "RT (min)": "{:.3f}",
-                    "Area (mAU·s)": "{:,.3f}",
-                    "Area%": "{:.3f}",
-                    "Height (mAU)": "{:,.3f}",
-                    "Height%": "{:.3f}",
-                },
-                na_rep="—",
-            ),
-            use_container_width=True,
-            hide_index=True,
-        )
-    else:
-        st.warning("No peaks were found inside the selected target window.")
 
     export_name = re.sub(
         r"[^A-Za-z0-9._-]+",
@@ -809,8 +614,8 @@ if "peak_comparison" in st.session_state:
     ).strip("._-") or "peak_comparison"
 
     st.download_button(
-        "Download comparison CSV",
-        data=make_export_table(comparison),
+        "Download results CSV",
+        data=make_export_table(basic_table),
         file_name=f"{export_name}_rt_{results['target_rt']:.3f}.csv",
         mime="text/csv",
         use_container_width=True,
