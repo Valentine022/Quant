@@ -25,79 +25,101 @@ st.markdown(
     """
     <style>
       .stApp {
-        background: #f4fbfa;
+        background: #e8f7f5;
+      }
+
+      header[data-testid="stHeader"] {
+        display: none;
+      }
+
+      div[data-testid="stToolbar"] {
+        display: none;
       }
 
       .block-container {
-        max-width: 1300px;
-        padding-top: 1.2rem;
+        max-width: 1200px;
+        padding-top: 1rem;
       }
 
       .hero {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
         background: white;
-        border: 1px solid #c9e4df;
+        border: 1px solid #b9dfd8;
         border-radius: 18px;
-        padding: 1.4rem 1.6rem;
-        margin-bottom: 1.2rem;
-        box-shadow: 0 8px 24px rgba(25, 80, 75, 0.06);
+        padding: 1.2rem 1.6rem;
+        margin-bottom: 1.5rem;
+      }
+
+      .hero-text {
+        flex: 1;
       }
 
       .hero h1 {
         margin: 0;
-        font-size: 2.4rem;
+        font-size: 2.2rem;
+        font-weight: 700;
       }
 
       .hero p {
-        margin: 0.45rem 0 0;
-        color: #566;
+        margin: 0.35rem 0 0 0;
         font-size: 1.05rem;
+        color: #555;
       }
 
-      .metric-card {
+      section[data-testid="stSidebar"] {
+        background: #f9fffe;
+        border-right: 1px solid #b9dfd8;
+      }
+
+      div[data-testid="stFileUploader"] {
         background: white;
-        border: 1px solid #c9e4df;
-        border-radius: 16px;
-        padding: 1rem 1.1rem;
-        min-height: 145px;
-      }
-
-      .sample-name {
-        font-size: 1.25rem;
-        font-weight: 750;
-        margin-bottom: 0.5rem;
-      }
-
-      .peak-value {
-        font-size: 2.15rem;
-        font-weight: 850;
-        line-height: 1.05;
-      }
-
-      .peak-label {
-        color: #667085;
-        font-size: 0.92rem;
-        margin-top: 0.25rem;
+        border: 1px solid #b9dfd8;
+        border-radius: 14px;
+        padding: 0.8rem;
       }
 
       div[data-testid="stDataFrame"] {
         background: white;
+        border: 1px solid #b9dfd8;
         border-radius: 14px;
         overflow: hidden;
+      }
+
+      div[data-testid="stPlotlyChart"],
+      div[data-testid="stVegaLiteChart"],
+      div[data-testid="stPyplotGlobalUse"] {
+        background: white;
+        border: 1px solid #b9dfd8;
+        border-radius: 14px;
+        padding: 0.6rem;
+      }
+
+      .stButton > button,
+      .stDownloadButton > button {
+        border-radius: 10px;
+        font-weight: 650;
+      }
+
+      h2, h3 {
+        color: #1c2434;
       }
     </style>
     """,
     unsafe_allow_html=True,
 )
 
-
 st.markdown(
     """
     <div class="hero">
-      <h1>HPLC Peak Comparison</h1>
-      <p>
-        Paste or upload a multi-sample peak table, select a target retention time,
-        and compare the nearest matching peak across all samples.
-      </p>
+      <div class="hero-text">
+        <h1>HPLC Peak Comparison</h1>
+        <p>
+          Upload a multi-sample peak table, select a target retention time,
+          and compare the nearest matching peak across all samples.
+        </p>
+      </div>
     </div>
     """,
     unsafe_allow_html=True,
