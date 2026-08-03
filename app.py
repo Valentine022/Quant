@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import io
 import re
 from dataclasses import dataclass
@@ -8,6 +9,34 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import pandas as pd
 import streamlit as st
+
+
+
+def get_logo_html() -> str:
+    """Load the Evoralis logo from the app folder, with a styled fallback."""
+    app_directory = Path(__file__).resolve().parent
+    possible_logos = [
+        app_directory / "EvoralisLogo.png",
+        app_directory / "cropped-cropped-0_Evoralis_logo_for-emails_final_v2.png",
+    ]
+
+    for logo_path in possible_logos:
+        if logo_path.exists():
+            encoded_logo = base64.b64encode(logo_path.read_bytes()).decode("ascii")
+            return (
+                f'<img class="evoralis-logo" '
+                f'src="data:image/png;base64,{encoded_logo}" '
+                f'alt="Evoralis">'
+            )
+
+    return (
+        '<div class="evoralis-wordmark" aria-label="Evoralis">'
+        '<span>EVORALIS</span>'
+        '</div>'
+    )
+
+
+logo_html = get_logo_html()
 
 
 st.set_page_config(
@@ -24,14 +53,23 @@ st.set_page_config(
 st.markdown(
     """
     <style>
+      :root {
+        --ev-bg: #e8f7f5;
+        --ev-panel: #ffffff;
+        --ev-border: #b9dfd8;
+        --ev-text: #1c2434;
+        --ev-muted: #667085;
+        --ev-purple: #9370DB;
+        --ev-purple-dark: #7651c6;
+        --ev-purple-soft: #f0e8f7;
+      }
+
       .stApp {
-        background: #e8f7f5;
+        background: var(--ev-bg);
+        color: var(--ev-text);
       }
 
-      header[data-testid="stHeader"] {
-        display: none;
-      }
-
+      header[data-testid="stHeader"],
       div[data-testid="stToolbar"] {
         display: none;
       }
@@ -44,9 +82,9 @@ st.markdown(
       .hero {
         display: flex;
         align-items: center;
-        gap: 1rem;
-        background: white;
-        border: 1px solid #b9dfd8;
+        gap: 1.25rem;
+        background: var(--ev-panel);
+        border: 1px solid var(--ev-border);
         border-radius: 18px;
         padding: 1.2rem 1.6rem;
         margin-bottom: 1.5rem;
@@ -63,47 +101,134 @@ st.markdown(
       }
 
       .hero p {
-        margin: 0.35rem 0 0 0;
+        margin: 0.35rem 0 0;
         font-size: 1.05rem;
         color: #555;
       }
 
+      .evoralis-logo {
+        height: 80px;
+        width: auto;
+        max-width: 230px;
+        object-fit: contain;
+        flex-shrink: 0;
+      }
+
+      .evoralis-wordmark {
+        min-width: 210px;
+        height: 80px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 12px;
+        background: var(--ev-purple-soft);
+        border: 2px solid var(--ev-purple);
+        color: var(--ev-purple-dark);
+        font-size: 1.55rem;
+        font-weight: 850;
+        letter-spacing: 0.12em;
+      }
+
       section[data-testid="stSidebar"] {
         background: #f9fffe;
-        border-right: 1px solid #b9dfd8;
+        border-right: 1px solid var(--ev-border);
+      }
+
+      section[data-testid="stSidebar"] h1,
+      section[data-testid="stSidebar"] h2,
+      section[data-testid="stSidebar"] h3 {
+        color: var(--ev-text);
+      }
+
+      /* Purple label bars for dropdowns and key controls */
+      div[data-testid="stSelectbox"] > label,
+      div[data-testid="stNumberInput"] > label,
+      div[data-testid="stTextInput"] > label,
+      div[data-testid="stFileUploader"] > label {
+        display: inline-block;
+        width: 100%;
+        background: var(--ev-purple);
+        color: white !important;
+        padding: 0.58rem 0.8rem;
+        border-radius: 10px 10px 0 0;
+        font-size: 1rem;
+        font-weight: 750;
+        margin-bottom: 0;
+      }
+
+      div[data-testid="stSelectbox"] > div,
+      div[data-testid="stNumberInput"] > div,
+      div[data-testid="stTextInput"] > div {
+        background: white;
+        border: 1px solid var(--ev-border);
+        border-top: 0;
+        border-radius: 0 0 10px 10px;
+        padding: 0.35rem;
+      }
+
+      div[data-baseweb="select"] > div {
+        border-color: var(--ev-border) !important;
+        border-radius: 8px !important;
       }
 
       div[data-testid="stFileUploader"] {
         background: white;
-        border: 1px solid #b9dfd8;
-        border-radius: 14px;
+        border: 1px solid var(--ev-border);
+        border-radius: 12px;
+        overflow: hidden;
+        padding: 0;
+      }
+
+      div[data-testid="stFileUploader"] section {
         padding: 0.8rem;
       }
 
       div[data-testid="stDataFrame"] {
         background: white;
-        border: 1px solid #b9dfd8;
+        border: 1px solid var(--ev-border);
         border-radius: 14px;
         overflow: hidden;
       }
 
-      div[data-testid="stPlotlyChart"],
       div[data-testid="stVegaLiteChart"],
       div[data-testid="stPyplotGlobalUse"] {
         background: white;
-        border: 1px solid #b9dfd8;
+        border: 1px solid var(--ev-border);
         border-radius: 14px;
-        padding: 0.6rem;
+        padding: 0.7rem;
       }
 
       .stButton > button,
       .stDownloadButton > button {
         border-radius: 10px;
-        font-weight: 650;
+        font-weight: 700;
+      }
+
+      .stButton > button[kind="primary"] {
+        background: var(--ev-purple);
+        border-color: var(--ev-purple);
+      }
+
+      .stButton > button[kind="primary"]:hover {
+        background: var(--ev-purple-dark);
+        border-color: var(--ev-purple-dark);
       }
 
       h2, h3 {
-        color: #1c2434;
+        color: var(--ev-text);
+      }
+
+      @media (max-width: 700px) {
+        .hero {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+
+        .evoralis-logo,
+        .evoralis-wordmark {
+          height: 64px;
+          min-width: 180px;
+        }
       }
     </style>
     """,
@@ -111,8 +236,9 @@ st.markdown(
 )
 
 st.markdown(
-    """
+    f"""
     <div class="hero">
+      {logo_html}
       <div class="hero-text">
         <h1>HPLC Peak Comparison</h1>
         <p>
