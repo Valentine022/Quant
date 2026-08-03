@@ -533,6 +533,25 @@ if st.button(
         )
         st.stop()
 
+    st.markdown("### Sample names")
+    st.caption("Edit the names used in the plate, table, and plot.")
+
+    edited_names = []
+    name_columns = st.columns(min(len(parsed_samples), 3))
+
+    for sample_index, sample in enumerate(parsed_samples):
+        with name_columns[sample_index % len(name_columns)]:
+            edited_name = st.text_input(
+                f"{sample.label} name",
+                value=sample.name,
+                key=f"sample_name_{sample_index}",
+            )
+            edited_names.append(edited_name.strip() or sample.label)
+
+    for sample, edited_name in zip(parsed_samples, edited_names):
+        sample.name = edited_name
+        sample.peaks["Sample name"] = edited_name
+
     comparison_records = [
         find_nearest_peak(sample, target_rt, tolerance)
         for sample in parsed_samples
@@ -606,6 +625,40 @@ if "peak_comparison" in st.session_state:
         use_container_width=True,
         hide_index=True,
     )
+
+    st.markdown("### Peak area")
+
+    plot_data = basic_table.dropna(subset=["Area (mAU·s)"]).copy()
+
+    if plot_data.empty:
+        st.warning("No matched peak-area values are available to plot.")
+    else:
+        plot_data["Sample order"] = range(1, len(plot_data) + 1)
+
+        st.scatter_chart(
+            plot_data,
+            x="Sample order",
+            y="Area (mAU·s)",
+            size=90,
+            use_container_width=True,
+        )
+
+        st.caption(
+            "Each dot represents one sample. Hover over a point to view its peak area."
+        )
+
+        label_table = plot_data[
+            ["Sample order", "Well", "Sample name", "Area (mAU·s)"]
+        ].copy()
+
+        st.dataframe(
+            label_table.style.format(
+                {"Area (mAU·s)": "{:,.3f}"},
+                na_rep="—",
+            ),
+            use_container_width=True,
+            hide_index=True,
+        )
 
     export_name = re.sub(
         r"[^A-Za-z0-9._-]+",
