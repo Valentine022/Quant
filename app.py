@@ -323,6 +323,7 @@ def draw_96_well_plate(
     plate_data: pd.DataFrame,
     value_column: str,
     target_rt: float,
+    plate_name: str,
 ):
     rows = list("ABCDEFGH")
     columns = list(range(1, 13))
@@ -436,7 +437,7 @@ def draw_96_well_plate(
     ax.set_yticklabels(rows[::-1], fontsize=11, fontweight="bold")
     ax.tick_params(length=0)
     ax.set_title(
-        f"96-well plate — {value_column} near {target_rt:.3f} min",
+        f"{plate_name}\n96-well plate — {value_column} near {target_rt:.3f} min",
         fontsize=16,
         fontweight="bold",
         pad=22,
@@ -472,6 +473,12 @@ def make_export_table(comparison: pd.DataFrame) -> bytes:
 
 with st.sidebar:
     st.header("Comparison settings")
+
+    plate_name = st.text_input(
+        "Sample / plate name",
+        value="HPLC Peak Comparison",
+        help="Used as the main heading of the 96-well plate plot.",
+    )
 
     target_rt = st.number_input(
         "Target retention time (min)",
@@ -533,25 +540,6 @@ if st.button(
         )
         st.stop()
 
-    st.markdown("### Sample names")
-    st.caption("Edit the names used in the plate, table, and plot.")
-
-    edited_names = []
-    name_columns = st.columns(min(len(parsed_samples), 3))
-
-    for sample_index, sample in enumerate(parsed_samples):
-        with name_columns[sample_index % len(name_columns)]:
-            edited_name = st.text_input(
-                f"{sample.label} name",
-                value=sample.name,
-                key=f"sample_name_{sample_index}",
-            )
-            edited_names.append(edited_name.strip() or sample.label)
-
-    for sample, edited_name in zip(parsed_samples, edited_names):
-        sample.name = edited_name
-        sample.peaks["Sample name"] = edited_name
-
     comparison_records = [
         find_nearest_peak(sample, target_rt, tolerance)
         for sample in parsed_samples
@@ -560,6 +548,7 @@ if st.button(
 
     st.session_state["peak_comparison"] = {
         "title": title or "Peak Comparison",
+        "plate_name": plate_name.strip() or title or "HPLC Peak Comparison",
         "target_rt": target_rt,
         "tolerance": tolerance,
         "samples": parsed_samples,
@@ -583,18 +572,30 @@ if "peak_comparison" in st.session_state:
 
     plate_data = assign_wells(comparison)
 
-    # Fixed display: colour wells by matched peak area.
+    plate_metric = st.selectbox(
+        "96-well plot value",
+        options=[
+            "Area (mAU·s)",
+            "Height (mAU)",
+            "Area%",
+            "Height%",
+        ],
+        index=0,
+        help="Choose which matched peak measurement controls the well colours.",
+    )
+
     plate_figure = draw_96_well_plate(
         plate_data=plate_data,
-        value_column="Area (mAU·s)",
+        value_column=plate_metric,
         target_rt=results["target_rt"],
+        plate_name=results["plate_name"],
     )
     st.pyplot(plate_figure, use_container_width=True)
     plt.close(plate_figure)
 
     st.caption(
-        "Samples are assigned sequentially from A1 to A12, then B1 to B12. "
-        "Darker wells have a larger matched peak area. Grey wells have no accepted match."
+        f"Samples are assigned sequentially from A1 to A12, then B1 to B12. "
+        f"Darker wells have a larger {plate_metric}. Grey wells have no accepted match."
     )
 
     st.markdown("### Results")
