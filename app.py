@@ -21,6 +21,46 @@ import streamlit as st
 UPLOAD_LOCATION_URL = "https://your-upload-location.example.com"
 UPLOAD_LOCATION_LABEL = "Open peak-report upload location"
 
+# Access control: authorised Google accounts only.
+ALLOWED_DOMAIN = "evoralis.com"
+ALLOWED_EMAILS = {
+    "daniel.kaute@evoralis.com",
+    "mariana.rangel@evoralis.com",
+    "josephin.holstein@evoralis.com",
+    "tom.ogden@evoralis.com",
+    "devanshi.singh@evoralis.com",
+    "simona.pilotto@evoralis.com",
+    "elizabeth.nganga@evoralis.com",
+    "marcus.bage@evoralis.com",
+    "adam.roberts@evoralis.com",
+    "david.miranda@evoralis.com",
+    "dylan.george@evoralis.com",
+    "michaela.buerdsell@evoralis.com",
+    "asha.webb@evoralis.com",
+    "valentine.patterson@evoralis.com",
+}
+
+
+def get_user_value(name: str, default=None):
+    """Read an OIDC claim from ``st.user`` safely."""
+    try:
+        value = getattr(st.user, name)
+        if value is not None:
+            return value
+    except Exception:
+        pass
+
+    try:
+        return st.user.get(name, default)
+    except Exception:
+        return default
+
+
+def claim_is_true(value) -> bool:
+    """Convert a string or boolean OIDC claim safely."""
+    if isinstance(value, str):
+        return value.strip().lower() == "true"
+    return bool(value)
 
 
 def get_logo_html() -> str:
@@ -71,6 +111,74 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
+
+
+# --------------------------------------------------
+# Authentication
+# --------------------------------------------------
+
+if not st.user.is_logged_in:
+    st.markdown(
+        """
+        <style>
+          .stApp { background: #e8f7f5; }
+          header[data-testid="stHeader"],
+          div[data-testid="stToolbar"] { display: none; }
+          .block-container { max-width: 900px; padding-top: 2rem; }
+          .login-card {
+            display: flex; align-items: center; gap: 1.4rem;
+            background: white; border: 1px solid #b9dfd8;
+            border-radius: 18px; padding: 1.4rem 1.6rem; margin-bottom: 1.2rem;
+          }
+          .login-card h1 { margin: 0; }
+          .login-card p { margin: .4rem 0 0; color: #555; }
+          .evoralis-logo { height: 80px; width: auto; max-width: 220px; object-fit: contain; }
+          .evoralis-wordmark {
+            min-width: 190px; height: 72px; display: flex; align-items: center;
+            justify-content: center; border-radius: 12px; background: #f0e8f7;
+            border: 2px solid #9370DB; color: #7651c6; font-size: 1.35rem;
+            font-weight: 850; letter-spacing: .12em;
+          }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        f"""
+        <div class="login-card">
+          {logo_html}
+          <div>
+            <h1>HPLC Peak Comparison</h1>
+            <p>This private application is available to authorised users.</p>
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.info("Sign in with Google to continue.")
+    if st.button(
+        "Sign in with Google",
+        key="google_login_button",
+        type="primary",
+        use_container_width=True,
+    ):
+        st.login()
+    st.stop()
+
+email = str(get_user_value("email", "") or "").strip().lower()
+email_verified = claim_is_true(get_user_value("email_verified", False))
+allowed_emails = {address.strip().lower() for address in ALLOWED_EMAILS if address.strip()}
+is_authorised = email_verified and (
+    email.endswith(f"@{ALLOWED_DOMAIN}") or email in allowed_emails
+)
+
+if not is_authorised:
+    st.error("Access denied. Your Google account is not authorised to use this application.")
+    if email:
+        st.write(f"Signed-in email: **{email}**")
+    if st.button("Sign out", key="unauthorised_logout_button", use_container_width=True):
+        st.logout()
+    st.stop()
 
 
 # --------------------------------------------------
@@ -964,6 +1072,15 @@ def make_html_export_zip(
 # --------------------------------------------------
 
 with st.sidebar:
+    st.success(f"Signed in as {email}")
+    if st.button(
+        "Sign out",
+        key="authorised_logout_button",
+        use_container_width=True,
+    ):
+        st.logout()
+    st.divider()
+
     st.markdown('<div id="settings" class="section-anchor"></div>', unsafe_allow_html=True)
     st.markdown(
         '<div class="purple-section-header">Report settings</div>',
@@ -976,9 +1093,11 @@ with st.sidebar:
         help="Used as the report heading and the 96-well plate plot title.",
     )
 
+    signed_in_name = str(get_user_value("name", "") or "").strip()
+    default_analyst = signed_in_name or email.split("@", 1)[0].replace(".", " ").title()
     analyst_name = st.text_input(
         "User / analyst name",
-        value="",
+        value=default_analyst,
         help="Added to the exported HTML report.",
     )
 
