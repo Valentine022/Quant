@@ -4,6 +4,7 @@ import base64
 import io
 import re
 import zipfile
+from html import escape
 from datetime import datetime
 from dataclasses import dataclass
 from pathlib import Path
@@ -15,7 +16,7 @@ import streamlit as st
 
 # Hard-coded upload location shown in the app and exported report.
 # Replace this URL once with your real SharePoint/network web location.
-UPLOAD_LOCATION_URL = "https://drive.google.com/drive/folders/1Q1esl-zOp91ddqjxvqj0CAehQ2wXOKTb?usp=sharing"
+UPLOAD_LOCATION_URL = "https://your-upload-location.example.com"
 UPLOAD_LOCATION_LABEL = "Open peak-report upload location"
 
 
@@ -760,7 +761,7 @@ def build_html_report(
             "data:image/png;base64," + base64.b64encode(peak_area_png).decode("ascii")
         )
         peak_area_section = (
-            '<section class="card"><h2 class="section-bar">Peak area</h2>'
+            '<section class="card" id="peak-area"><h2 class="section-bar">Peak area</h2>'
             f'<img src="{peak_area_data_uri}" alt="Peak area plot"></section>'
         )
 
@@ -773,7 +774,10 @@ def build_html_report(
   <style>
     body {{ font-family: Arial, sans-serif; margin: 0; background: #e8f7f5; color: #1c2434; }}
     main {{ max-width: 1180px; margin: 0 auto; padding: 32px; }}
-    .card {{ background: white; border: 1px solid #b9dfd8; border-radius: 14px; padding: 24px; margin-bottom: 22px; }}
+    .report-nav { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 9px; flex-wrap: wrap; padding: 12px 18px; margin-bottom: 22px; background: #f0e8f7; border: 1px solid #d7c8e9; border-radius: 14px; }
+    .report-nav a, .report-nav .selection { display: inline-block; padding: 9px 14px; border-radius: 999px; background: #9370DB; color: white; text-decoration: none; font-weight: 700; }
+    .report-nav .selection { margin-left: auto; background: #7651c6; }
+    .card {{ background: white; border: 1px solid #b9dfd8; border-radius: 14px; padding: 24px; margin-bottom: 22px; scroll-margin-top: 90px; }}
     h1, h2 {{ margin-top: 0; }}
     .report-header {{ display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }}
     .report-logo {{ width: auto; max-width: 230px; max-height: 86px; border-radius: 0; }}
@@ -791,28 +795,35 @@ def build_html_report(
 </head>
 <body>
 <main>
-  <section class="card">
+  <nav class="report-nav" aria-label="Report sections">
+    <a href="#report-summary">Summary</a>
+    <a href="#plate-view">96-well plate</a>
+    <a href="#results-table">Results</a>
+    <a href="#peak-area">Peak area</a>
+    <span class="selection">Selected metric: {escape(plate_metric)}</span>
+  </nav>
+  <section class="card" id="report-summary">
     <div class="report-header">
       {report_logo}
       <div class="report-heading">
-        <h1>{report_title}</h1>
+        <h1>{escape(report_title)}</h1>
         <a class="upload-link" href="{safe_upload_url}" target="_blank" rel="noopener noreferrer">{UPLOAD_LOCATION_LABEL}</a>
       </div>
     </div>
     <div class="meta">
-      <div><strong>Sample / plate name</strong><br>{plate_name}</div>
-      <div><strong>User / analyst</strong><br>{analyst_display}</div>
+      <div><strong>Sample / plate name</strong><br>{escape(plate_name)}</div>
+      <div><strong>User / analyst</strong><br>{escape(analyst_display)}</div>
       <div><strong>Target retention time</strong><br>{target_rt:.3f} min</div>
       <div><strong>Matching tolerance</strong><br>±{tolerance:.3f} min</div>
-      <div><strong>Plate colour metric</strong><br>{plate_metric}</div>
+      <div><strong>Plate colour metric</strong><br>{escape(plate_metric)}</div>
       <div><strong>Generated</strong><br>{generated_at}</div>
     </div>
   </section>
-  <section class="card">
+  <section class="card" id="plate-view">
     <h2 class="section-bar">96-well plate</h2>
     <img src="{plate_data_uri}" alt="96-well plate plot">
   </section>
-  <section class="card">
+  <section class="card" id="results-table">
     <h2 class="section-bar">Results table</h2>
     {table_html}
   </section>
@@ -1090,11 +1101,15 @@ if "peak_comparison" in st.session_state:
             hide_index=True,
         )
 
-    export_name = re.sub(
-        r"[^A-Za-z0-9._-]+",
-        "_",
-        results["title"].strip(),
-    ).strip("._-") or "peak_comparison"
+    export_date = datetime.now().strftime("%Y-%m-%d")
+
+    def filename_part(value: str, fallback: str) -> str:
+        cleaned = re.sub(r"[^A-Za-z0-9._-]+", "_", value.strip())
+        return cleaned.strip("._-") or fallback
+
+    sample_filename = filename_part(results["plate_name"], "sample")
+    user_filename = filename_part(results["analyst_name"], "user")
+    export_name = f"{export_date}_{sample_filename}_{user_filename}"
 
     st.markdown('<div id="download-results" class="section-anchor"></div>', unsafe_allow_html=True)
     st.markdown(
@@ -1128,7 +1143,7 @@ if "peak_comparison" in st.session_state:
     st.download_button(
         "Download HTML report",
         data=html_bytes,
-        file_name=f"{export_name}_rt_{results['target_rt']:.3f}.html",
+        file_name=f"{export_name}.html",
         mime="text/html",
         use_container_width=True,
     )
@@ -1136,7 +1151,7 @@ if "peak_comparison" in st.session_state:
     st.download_button(
         "Download HTML report folder (ZIP)",
         data=zip_bytes,
-        file_name=f"{export_name}_html_report.zip",
+        file_name=f"{export_name}_report_folder.zip",
         mime="application/zip",
         use_container_width=True,
     )
@@ -1144,7 +1159,7 @@ if "peak_comparison" in st.session_state:
     st.download_button(
         "Download results CSV",
         data=csv_bytes,
-        file_name=f"{export_name}_rt_{results['target_rt']:.3f}.csv",
+        file_name=f"{export_name}_results.csv",
         mime="text/csv",
         use_container_width=True,
     )
