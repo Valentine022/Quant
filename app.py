@@ -847,6 +847,16 @@ def build_html_report(
     main {{ max-width: 1180px; margin: 0 auto; padding: 32px; }}
     .card {{ background: white; border: 1px solid #b9dfd8; border-radius: 14px; padding: 24px; margin-bottom: 22px; scroll-margin-top: 90px; }}
     h1, h2 {{ margin-top: 0; }}
+    .report-masthead {{ display: flex; align-items: center; gap: 22px; background: white; border: 1px solid #b9dfd8; border-radius: 16px; padding: 20px 24px; margin-bottom: 14px; }}
+    .report-masthead-logo {{ width: 105px; flex: 0 0 105px; display: flex; align-items: center; justify-content: center; }}
+    .report-masthead-logo .report-logo {{ max-width: 100px; max-height: 74px; }}
+    .report-masthead-copy {{ flex: 1; min-width: 0; }}
+    .report-masthead-copy h1 {{ margin: 0 0 8px; font-size: 2rem; line-height: 1.1; }}
+    .report-masthead-copy p {{ margin: 0; color: #667085; font-size: 1rem; }}
+    .report-masthead-copy a {{ color: #0b66c3; font-weight: 700; }}
+    .report-nav {{ position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 9px; flex-wrap: wrap; padding: 12px 14px; margin-bottom: 24px; background: #f0e8f7; border: 1px solid #d7c8e9; border-radius: 14px; }}
+    .report-nav a {{ display: inline-block; padding: 9px 15px; border-radius: 999px; background: #9370DB; color: white; text-decoration: none; font-weight: 700; }}
+    .report-nav a:hover {{ background: #7651c6; }}
     .combined-header {{ display: flex; align-items: center; gap: 30px; padding: 32px 4px 30px; margin-bottom: 24px; border-top: 1px solid #d7c8e9; border-bottom: 1px solid #d7c8e9; }}
     .combined-logo {{ width: 130px; flex: 0 0 130px; display: flex; align-items: center; justify-content: center; }}
     .combined-logo .report-logo {{ max-width: 125px; max-height: 100px; }}
@@ -854,7 +864,15 @@ def build_html_report(
     .combined-copy h1 {{ margin: 0 0 14px; font-size: 3.1rem; line-height: 1.05; letter-spacing: -0.02em; }}
     .combined-copy p {{ margin: 7px 0; color: #66738f; font-size: 1.2rem; }}
     .combined-copy a {{ color: #0b66c3; font-weight: 700; }}
-    @media (max-width: 700px) {{ .combined-header {{ align-items: flex-start; gap: 18px; }} .combined-logo {{ width: 88px; flex-basis: 88px; }} .combined-copy h1 {{ font-size: 2rem; }} }}
+    @media (max-width: 700px) {{
+      .report-masthead {{ align-items: flex-start; gap: 14px; padding: 16px; }}
+      .report-masthead-logo {{ width: 72px; flex-basis: 72px; }}
+      .report-masthead-copy h1 {{ font-size: 1.55rem; }}
+      .report-nav {{ position: static; }}
+      .combined-header {{ align-items: flex-start; gap: 18px; }}
+      .combined-logo {{ width: 88px; flex-basis: 88px; }}
+      .combined-copy h1 {{ font-size: 2rem; }}
+    }}
     .report-header {{ display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }}
     .report-logo {{ width: auto; max-width: 230px; max-height: 86px; border-radius: 0; }}
     .report-wordmark {{ padding: 18px 24px; border: 2px solid #9370DB; color: #7651c6; font-weight: 850; letter-spacing: .12em; border-radius: 12px; }}
@@ -871,6 +889,20 @@ def build_html_report(
 </head>
 <body>
 <main>
+  <header class="report-masthead" id="report-top">
+    <div class="report-masthead-logo">{report_logo}</div>
+    <div class="report-masthead-copy">
+      <h1>HPLC Peak Comparison</h1>
+      <p>Peak comparison and 96-well plate report. <a href="{safe_upload_url}" target="_blank" rel="noopener noreferrer">{UPLOAD_LOCATION_LABEL}</a></p>
+    </div>
+  </header>
+  <nav class="report-nav" aria-label="Report sections">
+    <a href="#input-data">Input data</a>
+    <a href="#plate-view">96-Well plate</a>
+    <a href="#results-table">Results</a>
+    <a href="#peak-area">Peak area</a>
+    <a href="#report-top">Top</a>
+  </nav>
   <section class="combined-header" id="input-data">
     <div class="combined-logo">{report_logo}</div>
     <div class="combined-copy">
