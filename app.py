@@ -13,6 +13,12 @@ import pandas as pd
 import streamlit as st
 
 
+# Hard-coded upload location shown in the app and exported report.
+# Replace this URL once with your real SharePoint/network web location.
+UPLOAD_LOCATION_URL = "https://drive.google.com/drive/folders/1Q1esl-zOp91ddqjxvqj0CAehQ2wXOKTb?usp=sharing"
+UPLOAD_LOCATION_LABEL = "Open peak-report upload location"
+
+
 
 def get_logo_html() -> str:
     """Load the Evoralis logo from the app folder, with a styled fallback."""
@@ -38,7 +44,22 @@ def get_logo_html() -> str:
     )
 
 
+def get_logo_data_uri() -> str | None:
+    """Return the first available Evoralis logo as an embedded PNG data URI."""
+    app_directory = Path(__file__).resolve().parent
+    possible_logos = [
+        app_directory / "EvoralisLogo.png",
+        app_directory / "cropped-cropped-0_Evoralis_logo_for-emails_final_v2.png",
+    ]
+    for logo_path in possible_logos:
+        if logo_path.exists():
+            encoded_logo = base64.b64encode(logo_path.read_bytes()).decode("ascii")
+            return f"data:image/png;base64,{encoded_logo}"
+    return None
+
+
 logo_html = get_logo_html()
+logo_data_uri = get_logo_data_uri()
 
 
 st.set_page_config(
@@ -707,6 +728,8 @@ def build_html_report(
     report_title: str,
     plate_name: str,
     analyst_name: str,
+    upload_location_url: str,
+    logo_uri: str | None,
     target_rt: float,
     tolerance: float,
     plate_metric: str,
@@ -717,6 +740,11 @@ def build_html_report(
     """Build a self-contained HTML report with images embedded as data URIs."""
     generated_at = datetime.now().strftime("%Y-%m-%d %H:%M")
     analyst_display = analyst_name.strip() or "Not specified"
+    safe_upload_url = upload_location_url.replace('"', '%22')
+    if logo_uri:
+        report_logo = f'<img class="report-logo" src="{logo_uri}" alt="Evoralis">'
+    else:
+        report_logo = '<div class="report-wordmark">EVORALIS</div>'
     table_html = results_table.to_html(
         index=False,
         border=0,
@@ -732,7 +760,7 @@ def build_html_report(
             "data:image/png;base64," + base64.b64encode(peak_area_png).decode("ascii")
         )
         peak_area_section = (
-            '<section class="card"><h2>Peak area</h2>'
+            '<section class="card"><h2 class="section-bar">Peak area</h2>'
             f'<img src="{peak_area_data_uri}" alt="Peak area plot"></section>'
         )
 
@@ -747,7 +775,13 @@ def build_html_report(
     main {{ max-width: 1180px; margin: 0 auto; padding: 32px; }}
     .card {{ background: white; border: 1px solid #b9dfd8; border-radius: 14px; padding: 24px; margin-bottom: 22px; }}
     h1, h2 {{ margin-top: 0; }}
-    .meta {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }}
+    .report-header {{ display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }}
+    .report-logo {{ width: auto; max-width: 230px; max-height: 86px; border-radius: 0; }}
+    .report-wordmark {{ padding: 18px 24px; border: 2px solid #9370DB; color: #7651c6; font-weight: 850; letter-spacing: .12em; border-radius: 12px; }}
+    .report-heading {{ flex: 1; min-width: 260px; }}
+    .upload-link {{ display: inline-block; margin-top: 8px; padding: 9px 14px; border-radius: 999px; background: #9370DB; color: white; text-decoration: none; font-weight: 700; }}
+    .section-bar {{ margin: -24px -24px 20px; padding: 13px 20px; border-radius: 13px 13px 0 0; background: #9370DB; color: white; }}
+    .meta {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-top: 20px; }}
     .meta div {{ background: #f0e8f7; border-radius: 10px; padding: 12px; }}
     img {{ display: block; width: 100%; height: auto; border-radius: 10px; }}
     .results-table {{ width: 100%; border-collapse: collapse; font-size: 0.92rem; }}
@@ -758,7 +792,13 @@ def build_html_report(
 <body>
 <main>
   <section class="card">
-    <h1>{report_title}</h1>
+    <div class="report-header">
+      {report_logo}
+      <div class="report-heading">
+        <h1>{report_title}</h1>
+        <a class="upload-link" href="{safe_upload_url}" target="_blank" rel="noopener noreferrer">{UPLOAD_LOCATION_LABEL}</a>
+      </div>
+    </div>
     <div class="meta">
       <div><strong>Sample / plate name</strong><br>{plate_name}</div>
       <div><strong>User / analyst</strong><br>{analyst_display}</div>
@@ -769,11 +809,11 @@ def build_html_report(
     </div>
   </section>
   <section class="card">
-    <h2>96-well plate</h2>
+    <h2 class="section-bar">96-well plate</h2>
     <img src="{plate_data_uri}" alt="96-well plate plot">
   </section>
   <section class="card">
-    <h2>Results table</h2>
+    <h2 class="section-bar">Results table</h2>
     {table_html}
   </section>
   {peak_area_section}
@@ -825,12 +865,6 @@ with st.sidebar:
         help="Added to the exported HTML report.",
     )
 
-    upload_location_url = st.text_input(
-        "Upload location link",
-        value="",
-        placeholder="https://company.sharepoint.com/...",
-        help="Displayed as a hyperlink above the file uploader.",
-    )
 
     target_rt = st.number_input(
         "Target retention time (min)",
@@ -868,15 +902,14 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-if upload_location_url.strip():
-    safe_url = upload_location_url.strip().replace('"', '%22')
-    st.markdown(
-        f'<a href="{safe_url}" target="_blank" rel="noopener noreferrer">'
-        'Open the folder where peak-report files should be uploaded</a>',
-        unsafe_allow_html=True,
-    )
-else:
-    st.info("Add an upload-location link in the sidebar to show a folder hyperlink here.")
+safe_upload_url = UPLOAD_LOCATION_URL.replace('"', '%22')
+st.markdown(
+    f'<a href="{safe_upload_url}" target="_blank" rel="noopener noreferrer" '
+    f'style="display:inline-block;padding:9px 14px;border-radius:999px;'
+    f'background:#9370DB;color:white;text-decoration:none;font-weight:700;">'
+    f'{UPLOAD_LOCATION_LABEL}</a>',
+    unsafe_allow_html=True,
+)
 
 uploaded = st.file_uploader(
     "Upload a TXT, TSV, or CSV export",
@@ -918,7 +951,7 @@ if st.button(
         "title": title or "Peak Comparison",
         "plate_name": plate_name.strip() or title or "HPLC Peak Comparison",
         "analyst_name": analyst_name.strip(),
-        "upload_location_url": upload_location_url.strip(),
+        "upload_location_url": UPLOAD_LOCATION_URL,
         "target_rt": target_rt,
         "tolerance": tolerance,
         "samples": parsed_samples,
@@ -1074,6 +1107,8 @@ if "peak_comparison" in st.session_state:
         report_title=results["title"],
         plate_name=results["plate_name"],
         analyst_name=results["analyst_name"],
+        upload_location_url=results["upload_location_url"],
+        logo_uri=logo_data_uri,
         target_rt=results["target_rt"],
         tolerance=results["tolerance"],
         plate_metric=plate_metric,
