@@ -19,7 +19,7 @@ import streamlit as st
 # Hard-coded upload location shown in the app and exported report.
 # Replace this URL once with your real SharePoint/network web location.
 UPLOAD_LOCATION_URL = "https://drive.google.com/drive/folders/1Q1esl-zOp91ddqjxvqj0CAehQ2wXOKTb?usp=sharing"
-UPLOAD_LOCATION_LABEL = "Upload your reports to EVO Shared data/96 Well Plate"
+UPLOAD_LOCATION_LABEL = "Upload your reports to EVO Shared Data - 96 Well Plate"
 
 # Access control: authorised Google accounts only.
 ALLOWED_DOMAIN = "evoralis.com"
