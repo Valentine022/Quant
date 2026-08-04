@@ -594,7 +594,7 @@ def draw_96_well_plate(
 
             if matched and pd.notna(numeric_value):
                 normalized = (float(numeric_value) - minimum) / (maximum - minimum)
-                facecolor = plt.cm.YlOrRd(0.2 + 0.8 * normalized)
+                facecolor = plt.cm.RdYlGn(normalized)
             else:
                 facecolor = "#d9dde3"
 
@@ -659,9 +659,9 @@ def draw_96_well_plate(
         spine.set_visible(False)
 
     scalar_map = plt.cm.ScalarMappable(
-        cmap=plt.cm.YlOrRd,
-        norm=plt.Normalize(vmin=minimum, vmax=maximum),
-    )
+    cmap=plt.cm.RdYlGn,
+    norm=plt.Normalize(vmin=minimum, vmax=maximum),
+)
     scalar_map.set_array([])
     colorbar = fig.colorbar(
         scalar_map,
