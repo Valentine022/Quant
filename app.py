@@ -218,6 +218,65 @@ st.markdown(
         color: var(--ev-text);
       }
 
+      html {
+        scroll-behavior: smooth;
+      }
+
+      .topnav {
+        position: sticky;
+        top: 0;
+        z-index: 999;
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin: 0 -1rem 1.35rem;
+        padding: 12px 1rem;
+        background: var(--ev-purple-soft);
+        border-top: 1px solid #d7c8e9;
+        border-bottom: 1px solid var(--ev-border);
+        backdrop-filter: blur(8px);
+      }
+
+      .topnav a {
+        display: inline-block;
+        padding: 8px 13px;
+        border-radius: 999px;
+        background: var(--ev-purple);
+        color: white !important;
+        text-decoration: none !important;
+        font-weight: 700;
+        line-height: 1.2;
+      }
+
+      .topnav a:hover {
+        background: var(--ev-purple-dark);
+      }
+
+      .section-anchor {
+        position: relative;
+        top: -82px;
+        visibility: hidden;
+      }
+
+      .purple-section-header {
+        margin: 1.5rem 0 0.85rem;
+        padding: 0.72rem 1rem;
+        border-radius: 12px;
+        background: var(--ev-purple);
+        color: white;
+        font-size: 1.35rem;
+        font-weight: 750;
+        line-height: 1.2;
+      }
+
+      .result-panel {
+        background: white;
+        border: 1px solid var(--ev-border);
+        border-radius: 14px;
+        padding: 0.9rem;
+        margin-bottom: 1rem;
+      }
+
       @media (max-width: 700px) {
         .hero {
           flex-direction: column;
@@ -247,6 +306,20 @@ st.markdown(
         </p>
       </div>
     </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+st.markdown(
+    """
+    <nav class="topnav" aria-label="Page sections">
+      <a href="#settings">Settings</a>
+      <a href="#upload">Upload</a>
+      <a href="#plate-view">96-well plate</a>
+      <a href="#results-table">Results</a>
+      <a href="#peak-area">Peak area</a>
+      <a href="#download-results">Download</a>
+    </nav>
     """,
     unsafe_allow_html=True,
 )
@@ -620,7 +693,11 @@ def make_export_table(comparison: pd.DataFrame) -> bytes:
 # --------------------------------------------------
 
 with st.sidebar:
-    st.header("Comparison settings")
+    st.markdown('<div id="settings" class="section-anchor"></div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="purple-section-header">Comparison settings</div>',
+        unsafe_allow_html=True,
+    )
 
     plate_name = st.text_input(
         "Sample / plate name",
@@ -657,6 +734,12 @@ with st.sidebar:
 # --------------------------------------------------
 # Input
 # --------------------------------------------------
+
+st.markdown('<div id="upload" class="section-anchor"></div>', unsafe_allow_html=True)
+st.markdown(
+    '<div class="purple-section-header">Upload peak report</div>',
+    unsafe_allow_html=True,
+)
 
 uploaded = st.file_uploader(
     "Upload a TXT, TSV, or CSV export",
@@ -712,13 +795,22 @@ if "peak_comparison" in st.session_state:
     results = st.session_state["peak_comparison"]
     comparison = results["comparison"].copy()
 
-    st.subheader(results["title"])
+    st.markdown(
+        f'<div class="purple-section-header">{results["title"]}</div>',
+        unsafe_allow_html=True,
+    )
     st.write(
         f"Peak nearest to **{results['target_rt']:.3f} min** "
         f"using a tolerance of **±{results['tolerance']:.3f} min**."
     )
 
     plate_data = assign_wells(comparison)
+
+    st.markdown('<div id="plate-view" class="section-anchor"></div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="purple-section-header">96-well plate</div>',
+        unsafe_allow_html=True,
+    )
 
     plate_metric = st.selectbox(
         "96-well plot value",
@@ -746,7 +838,11 @@ if "peak_comparison" in st.session_state:
         f"Darker wells have a larger {plate_metric}. Grey wells have no accepted match."
     )
 
-    st.markdown("### Results")
+    st.markdown('<div id="results-table" class="section-anchor"></div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="purple-section-header">Results table</div>',
+        unsafe_allow_html=True,
+    )
 
     basic_table = plate_data[
         [
@@ -775,7 +871,11 @@ if "peak_comparison" in st.session_state:
         hide_index=True,
     )
 
-    st.markdown("### Peak area")
+    st.markdown('<div id="peak-area" class="section-anchor"></div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="purple-section-header">Peak area</div>',
+        unsafe_allow_html=True,
+    )
 
     plot_data = basic_table.dropna(subset=["Area (mAU·s)"]).copy()
 
@@ -814,6 +914,12 @@ if "peak_comparison" in st.session_state:
         "_",
         results["title"].strip(),
     ).strip("._-") or "peak_comparison"
+
+    st.markdown('<div id="download-results" class="section-anchor"></div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="purple-section-header">Download</div>',
+        unsafe_allow_html=True,
+    )
 
     st.download_button(
         "Download results CSV",
