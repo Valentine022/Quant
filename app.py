@@ -3,6 +3,8 @@ from __future__ import annotations
 import base64
 import io
 import re
+import zipfile
+from datetime import datetime
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -679,6 +681,110 @@ def make_export_table(comparison: pd.DataFrame) -> bytes:
     return comparison.to_csv(index=False).encode("utf-8")
 
 
+def figure_to_png_bytes(figure) -> bytes:
+    """Render a Matplotlib figure to PNG bytes."""
+    buffer = io.BytesIO()
+    figure.savefig(buffer, format="png", dpi=220, bbox_inches="tight")
+    buffer.seek(0)
+    return buffer.getvalue()
+
+
+def build_html_report(
+    *,
+    report_title: str,
+    plate_name: str,
+    analyst_name: str,
+    target_rt: float,
+    tolerance: float,
+    plate_metric: str,
+    results_table: pd.DataFrame,
+    plate_image_name: str,
+    peak_area_image_name: str | None,
+) -> str:
+    """Build a portable HTML report that references images in the ZIP folder."""
+    generated_at = datetime.now().strftime("%Y-%m-%d %H:%M")
+    analyst_display = analyst_name.strip() or "Not specified"
+    table_html = results_table.to_html(
+        index=False,
+        border=0,
+        na_rep="—",
+        classes="results-table",
+        float_format=lambda value: f"{value:,.3f}",
+    )
+
+    peak_area_section = ""
+    if peak_area_image_name:
+        peak_area_section = (
+            '<section class="card"><h2>Peak area</h2>'
+            f'<img src="images/{peak_area_image_name}" alt="Peak area plot"></section>'
+        )
+
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{report_title}</title>
+  <style>
+    body {{ font-family: Arial, sans-serif; margin: 0; background: #e8f7f5; color: #1c2434; }}
+    main {{ max-width: 1180px; margin: 0 auto; padding: 32px; }}
+    .card {{ background: white; border: 1px solid #b9dfd8; border-radius: 14px; padding: 24px; margin-bottom: 22px; }}
+    h1, h2 {{ margin-top: 0; }}
+    .meta {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }}
+    .meta div {{ background: #f0e8f7; border-radius: 10px; padding: 12px; }}
+    img {{ display: block; width: 100%; height: auto; border-radius: 10px; }}
+    .results-table {{ width: 100%; border-collapse: collapse; font-size: 0.92rem; }}
+    .results-table th, .results-table td {{ border-bottom: 1px solid #dce7e5; padding: 9px; text-align: left; }}
+    .results-table th {{ background: #9370DB; color: white; }}
+  </style>
+</head>
+<body>
+<main>
+  <section class="card">
+    <h1>{report_title}</h1>
+    <div class="meta">
+      <div><strong>Sample / plate name</strong><br>{plate_name}</div>
+      <div><strong>User / analyst</strong><br>{analyst_display}</div>
+      <div><strong>Target retention time</strong><br>{target_rt:.3f} min</div>
+      <div><strong>Matching tolerance</strong><br>±{tolerance:.3f} min</div>
+      <div><strong>Plate colour metric</strong><br>{plate_metric}</div>
+      <div><strong>Generated</strong><br>{generated_at}</div>
+    </div>
+  </section>
+  <section class="card">
+    <h2>96-well plate</h2>
+    <img src="images/{plate_image_name}" alt="96-well plate plot">
+  </section>
+  <section class="card">
+    <h2>Results table</h2>
+    {table_html}
+  </section>
+  {peak_area_section}
+</main>
+</body>
+</html>"""
+
+
+def make_html_export_zip(
+    *,
+    report_html: str,
+    csv_bytes: bytes,
+    plate_png: bytes,
+    peak_area_png: bytes | None,
+    export_name: str,
+) -> bytes:
+    """Package the HTML report, results CSV, and plot images into one ZIP."""
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr("report.html", report_html.encode("utf-8"))
+        archive.writestr(f"{export_name}_results.csv", csv_bytes)
+        archive.writestr("images/plate.png", plate_png)
+        if peak_area_png is not None:
+            archive.writestr("images/peak_area.png", peak_area_png)
+    buffer.seek(0)
+    return buffer.getvalue()
+
+
 # --------------------------------------------------
 # Sidebar controls
 # --------------------------------------------------
@@ -693,7 +799,20 @@ with st.sidebar:
     plate_name = st.text_input(
         "Sample / plate name",
         value="HPLC Peak Comparison",
-        help="Used as the main heading of the 96-well plate plot.",
+        help="Used as the report heading and the 96-well plate plot title.",
+    )
+
+    analyst_name = st.text_input(
+        "User / analyst name",
+        value="",
+        help="Added to the exported HTML report.",
+    )
+
+    upload_location_url = st.text_input(
+        "Upload location link",
+        value="",
+        placeholder="https://company.sharepoint.com/...",
+        help="Displayed as a hyperlink above the file uploader.",
     )
 
     target_rt = st.number_input(
@@ -731,6 +850,16 @@ st.markdown(
     '<div class="purple-section-header">Upload peak report</div>',
     unsafe_allow_html=True,
 )
+
+if upload_location_url.strip():
+    safe_url = upload_location_url.strip().replace('"', '%22')
+    st.markdown(
+        f'<a href="{safe_url}" target="_blank" rel="noopener noreferrer">'
+        'Open the folder where peak-report files should be uploaded</a>',
+        unsafe_allow_html=True,
+    )
+else:
+    st.info("Add an upload-location link in the sidebar to show a folder hyperlink here.")
 
 uploaded = st.file_uploader(
     "Upload a TXT, TSV, or CSV export",
@@ -771,6 +900,8 @@ if st.button(
     st.session_state["peak_comparison"] = {
         "title": title or "Peak Comparison",
         "plate_name": plate_name.strip() or title or "HPLC Peak Comparison",
+        "analyst_name": analyst_name.strip(),
+        "upload_location_url": upload_location_url.strip(),
         "target_rt": target_rt,
         "tolerance": tolerance,
         "samples": parsed_samples,
@@ -822,6 +953,7 @@ if "peak_comparison" in st.session_state:
         plate_name=results["plate_name"],
     )
     st.pyplot(plate_figure, use_container_width=True)
+    plate_png = figure_to_png_bytes(plate_figure)
     plt.close(plate_figure)
 
     st.caption(
@@ -869,23 +1001,31 @@ if "peak_comparison" in st.session_state:
     )
 
     plot_data = basic_table.dropna(subset=["Area (mAU·s)"]).copy()
+    peak_area_png = None
 
     if plot_data.empty:
         st.warning("No matched peak-area values are available to plot.")
     else:
         plot_data["Sample order"] = range(1, len(plot_data) + 1)
 
-        st.scatter_chart(
-            plot_data,
-            x="Sample order",
-            y="Area (mAU·s)",
-            size=90,
-            use_container_width=True,
+        peak_area_figure, peak_area_axis = plt.subplots(figsize=(11, 5.5))
+        peak_area_axis.scatter(
+            plot_data["Sample order"],
+            plot_data["Area (mAU·s)"],
+            s=90,
         )
+        peak_area_axis.set_xlabel("Sample order")
+        peak_area_axis.set_ylabel("Area (mAU·s)")
+        peak_area_axis.set_title(
+            f"{results['plate_name']} — Peak area near {results['target_rt']:.3f} min"
+        )
+        peak_area_axis.grid(True, alpha=0.25)
+        peak_area_figure.tight_layout()
+        st.pyplot(peak_area_figure, use_container_width=True)
+        peak_area_png = figure_to_png_bytes(peak_area_figure)
+        plt.close(peak_area_figure)
 
-        st.caption(
-            "Each dot represents one sample. Hover over a point to view its peak area."
-        )
+        st.caption("Each dot represents one sample and its matched peak area.")
 
         label_table = plot_data[
             ["Sample order", "Well", "Sample name", "Area (mAU·s)"]
