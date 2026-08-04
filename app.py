@@ -104,19 +104,21 @@ st.markdown(
       }
 
       .block-container {
-        max-width: 1200px;
-        padding-top: 5.6rem;
+        max-width: 1180px;
+        padding-top: 1.8rem;
+        padding-bottom: 3rem;
       }
 
       .hero {
         display: flex;
         align-items: center;
-        gap: 1.25rem;
-        background: var(--ev-panel);
+        gap: 1rem;
+        background: #ffffff;
         border: 1px solid var(--ev-border);
-        border-radius: 18px;
-        padding: 1.2rem 1.6rem;
-        margin-bottom: 1.5rem;
+        border-radius: 16px;
+        padding: 1.25rem 1.55rem;
+        margin-bottom: 1.25rem;
+        box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
       }
 
       .hero-text {
@@ -125,7 +127,7 @@ st.markdown(
 
       .hero h1 {
         margin: 0;
-        font-size: 2.2rem;
+        font-size: 2rem;
         font-weight: 700;
       }
 
@@ -136,7 +138,7 @@ st.markdown(
       }
 
       .evoralis-logo {
-        height: 80px;
+        height: 66px;
         width: auto;
         max-width: 230px;
         object-fit: contain;
@@ -159,8 +161,16 @@ st.markdown(
       }
 
       section[data-testid="stSidebar"] {
-        background: var(--ev-panel);
-        border-right: 1px solid var(--ev-border);
+        background: #f1f3f6;
+        border-right: 1px solid #d9dee7;
+      }
+
+      section[data-testid="stSidebar"] > div {
+        padding-top: 1.5rem;
+      }
+
+      section[data-testid="stSidebar"] .block-container {
+        padding-top: 1rem;
       }
 
       section[data-testid="stSidebar"] h1,
@@ -178,9 +188,12 @@ st.markdown(
         font-weight: 650;
       }
 
-      div[data-baseweb="select"] > div {
-        border-color: var(--ev-border) !important;
+      div[data-baseweb="select"] > div,
+      div[data-testid="stTextInput"] input,
+      div[data-testid="stNumberInput"] input {
+        border-color: #d8dde6 !important;
         border-radius: 8px !important;
+        background: #ffffff !important;
       }
 
       div[data-testid="stFileUploader"] {
@@ -217,13 +230,14 @@ st.markdown(
       }
 
       .stButton > button[kind="primary"] {
-        background: var(--ev-purple);
-        border-color: var(--ev-purple);
+        background: #ff4b4b;
+        border-color: #ff4b4b;
+        color: white;
       }
 
       .stButton > button[kind="primary"]:hover {
-        background: var(--ev-purple-dark);
-        border-color: var(--ev-purple-dark);
+        background: #e83f3f;
+        border-color: #e83f3f;
       }
 
       h2, h3 {
@@ -234,38 +248,7 @@ st.markdown(
         scroll-behavior: smooth;
       }
 
-      .topnav {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        z-index: 9999;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        flex-wrap: wrap;
-        padding: 12px 20px;
-        margin: 0;
-        background: var(--ev-purple-soft);
-        border-bottom: 1px solid var(--ev-border);
-        backdrop-filter: blur(8px);
-        
-      }
-
-      .topnav a {
-        display: inline-block;
-        padding: 8px 12px;
-        border-radius: 999px;
-        background: var(--ev-purple);
-        color: white !important;
-        text-decoration: none !important;
-        font-weight: 650;
-        line-height: 1.2;
-      }
-
-      .topnav a:hover {
-        background: var(--ev-purple);
-      }
+      .topnav { display: none; }
 
       .section-anchor {
         position: relative;
@@ -274,15 +257,45 @@ st.markdown(
       }
 
       .purple-section-header {
-        margin: 1.5rem 0 0.85rem;
-        padding: 0 0 10px;
-        border-radius: 0;
-        border-bottom: 4px solid var(--ev-purple);
+        margin: 1.4rem 0 0.75rem;
+        padding: 0;
+        border: 0;
         background: transparent;
         color: var(--ev-text);
-        font-size: 1.75rem;
+        font-size: 1.55rem;
         font-weight: 750;
         line-height: 1.2;
+      }
+
+      .preview-nav {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        padding: 12px 14px;
+        margin: 0.7rem 0 1rem;
+        background: var(--ev-purple-soft);
+        border-top: 1px solid #d7c8e9;
+        border-bottom: 1px solid #d7c8e9;
+      }
+
+      .preview-nav a {
+        display: inline-block;
+        padding: 8px 13px;
+        border-radius: 999px;
+        background: var(--ev-purple);
+        color: white !important;
+        text-decoration: none !important;
+        font-weight: 700;
+      }
+
+      .upload-guide {
+        margin: 0.15rem 0 0.8rem;
+        color: var(--ev-muted);
+      }
+
+      .upload-guide a {
+        color: #0b66c3;
+        font-weight: 650;
       }
 
       .result-panel {
@@ -323,28 +336,14 @@ st.markdown(
 )
 
 st.markdown(
-    """
-    <nav class="topnav" aria-label="Page sections">
-      <a href="#settings">Settings</a>
-      <a href="#upload">Upload</a>
-      <a href="#plate-view">96-well plate</a>
-      <a href="#results-table">Results</a>
-      <a href="#peak-area">Peak area</a>
-      <a href="#download-results">Download</a>
-    </nav>
-    """,
-    unsafe_allow_html=True,
-)
-
-st.markdown(
     f"""
     <div class="hero">
       {logo_html}
       <div class="hero-text">
         <h1>HPLC Peak Comparison</h1>
         <p>
-          Upload a multi-sample peak table, select a target retention time,
-          and compare the nearest matching peak across all samples.
+          Upload a peak report, generate the comparison, and download one combined report.
+          Upload the finished report to the shared location.
         </p>
       </div>
     </div>
@@ -847,7 +846,7 @@ def make_html_export_zip(
 with st.sidebar:
     st.markdown('<div id="settings" class="section-anchor"></div>', unsafe_allow_html=True)
     st.markdown(
-        '<div class="purple-section-header">Comparison settings</div>',
+        '<div class="purple-section-header">Report settings</div>',
         unsafe_allow_html=True,
     )
 
@@ -895,17 +894,11 @@ with st.sidebar:
 # --------------------------------------------------
 
 st.markdown('<div id="upload" class="section-anchor"></div>', unsafe_allow_html=True)
-st.markdown(
-    '<div class="purple-section-header">Upload peak report</div>',
-    unsafe_allow_html=True,
-)
-
 safe_upload_url = UPLOAD_LOCATION_URL.replace('"', '%22')
 st.markdown(
-    f'<a href="{safe_upload_url}" target="_blank" rel="noopener noreferrer" '
-    f'style="display:inline-block;padding:9px 14px;border-radius:999px;'
-    f'background:#9370DB;color:white;text-decoration:none;font-weight:700;">'
-    f'{UPLOAD_LOCATION_LABEL}</a>',
+    f'<div class="upload-guide">Upload the source peak report below. '
+    f'Finished reports should be stored in '
+    f'<a href="{safe_upload_url}" target="_blank" rel="noopener noreferrer">the shared upload location</a>.</div>',
     unsafe_allow_html=True,
 )
 
@@ -965,6 +958,23 @@ if "peak_comparison" in st.session_state:
     results = st.session_state["peak_comparison"]
     comparison = results["comparison"].copy()
 
+    st.markdown("## Combined report preview")
+    st.caption(
+        "Results are grouped by section: input data, plate view, results, peak area, and downloads."
+    )
+    st.markdown(
+        """
+        <nav class="preview-nav" aria-label="Report preview sections">
+          <a href="#input-data">Input data</a>
+          <a href="#plate-view">96-well plate</a>
+          <a href="#results-table">Results</a>
+          <a href="#peak-area">Peak area</a>
+          <a href="#download-results">Download</a>
+        </nav>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.markdown('<div id="input-data" class="section-anchor"></div>', unsafe_allow_html=True)
     st.markdown(
         '<div class="purple-section-header">Input data</div>',
         unsafe_allow_html=True,
