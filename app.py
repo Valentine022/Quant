@@ -1137,7 +1137,7 @@ safe_upload_url = UPLOAD_LOCATION_URL.replace('"', '%22')
 st.markdown(
     f'<div class="upload-guide">Upload the source peak report below. '
     f'Finished reports should be stored in '
-    f'<a href="{safe_upload_url}" target="_blank" rel="noopener noreferrer">the shared upload location</a>.</div>',
+    f'<a href="{safe_upload_url}" target="_blank" rel="noopener noreferrer">the EVO Shared HPLC Data Folder</a>.</div>',
     unsafe_allow_html=True,
 )
 
