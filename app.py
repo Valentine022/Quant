@@ -45,6 +45,7 @@ st.set_page_config(
     page_title="Peak Comparison",
     page_icon="📈",
     layout="wide",
+    initial_sidebar_state="expanded",
 )
 
 
@@ -268,6 +269,18 @@ st.markdown(
         border-radius: 14px;
         padding: 0.9rem;
         margin-bottom: 1rem;
+      }
+
+      /* Keep the sidebar visible and remove its collapse control. */
+      section[data-testid="stSidebar"] {
+        min-width: 21rem !important;
+        width: 21rem !important;
+        transform: none !important;
+      }
+
+      button[data-testid="stSidebarCollapseButton"],
+      button[data-testid="collapsedControl"] {
+        display: none !important;
       }
 
       @media (max-width: 700px) {
@@ -698,10 +711,10 @@ def build_html_report(
     tolerance: float,
     plate_metric: str,
     results_table: pd.DataFrame,
-    plate_image_name: str,
-    peak_area_image_name: str | None,
+    plate_png: bytes,
+    peak_area_png: bytes | None,
 ) -> str:
-    """Build a portable HTML report that references images in the ZIP folder."""
+    """Build a self-contained HTML report with images embedded as data URIs."""
     generated_at = datetime.now().strftime("%Y-%m-%d %H:%M")
     analyst_display = analyst_name.strip() or "Not specified"
     table_html = results_table.to_html(
@@ -712,11 +725,15 @@ def build_html_report(
         float_format=lambda value: f"{value:,.3f}",
     )
 
+    plate_data_uri = "data:image/png;base64," + base64.b64encode(plate_png).decode("ascii")
     peak_area_section = ""
-    if peak_area_image_name:
+    if peak_area_png is not None:
+        peak_area_data_uri = (
+            "data:image/png;base64," + base64.b64encode(peak_area_png).decode("ascii")
+        )
         peak_area_section = (
             '<section class="card"><h2>Peak area</h2>'
-            f'<img src="images/{peak_area_image_name}" alt="Peak area plot"></section>'
+            f'<img src="{peak_area_data_uri}" alt="Peak area plot"></section>'
         )
 
     return f"""<!doctype html>
@@ -753,7 +770,7 @@ def build_html_report(
   </section>
   <section class="card">
     <h2>96-well plate</h2>
-    <img src="images/{plate_image_name}" alt="96-well plate plot">
+    <img src="{plate_data_uri}" alt="96-well plate plot">
   </section>
   <section class="card">
     <h2>Results table</h2>
@@ -1052,9 +1069,46 @@ if "peak_comparison" in st.session_state:
         unsafe_allow_html=True,
     )
 
+    csv_bytes = make_export_table(basic_table)
+    report_html = build_html_report(
+        report_title=results["title"],
+        plate_name=results["plate_name"],
+        analyst_name=results["analyst_name"],
+        target_rt=results["target_rt"],
+        tolerance=results["tolerance"],
+        plate_metric=plate_metric,
+        results_table=basic_table,
+        plate_png=plate_png,
+        peak_area_png=peak_area_png,
+    )
+    html_bytes = report_html.encode("utf-8")
+    zip_bytes = make_html_export_zip(
+        report_html=report_html,
+        csv_bytes=csv_bytes,
+        plate_png=plate_png,
+        peak_area_png=peak_area_png,
+        export_name=export_name,
+    )
+
+    st.download_button(
+        "Download HTML report",
+        data=html_bytes,
+        file_name=f"{export_name}_rt_{results['target_rt']:.3f}.html",
+        mime="text/html",
+        use_container_width=True,
+    )
+
+    st.download_button(
+        "Download HTML report folder (ZIP)",
+        data=zip_bytes,
+        file_name=f"{export_name}_html_report.zip",
+        mime="application/zip",
+        use_container_width=True,
+    )
+
     st.download_button(
         "Download results CSV",
-        data=make_export_table(basic_table),
+        data=csv_bytes,
         file_name=f"{export_name}_rt_{results['target_rt']:.3f}.csv",
         mime="text/csv",
         use_container_width=True,
