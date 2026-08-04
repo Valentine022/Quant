@@ -288,6 +288,78 @@ st.markdown(
         font-weight: 700;
       }
 
+
+
+      .combined-report-header {
+        display: flex;
+        align-items: center;
+        gap: 30px;
+        padding: 28px 20px 26px;
+        margin: 0.8rem 0 1.4rem;
+        border-top: 1px solid #d7c8e9;
+        border-bottom: 1px solid #d7c8e9;
+        background: transparent;
+      }
+
+      .combined-report-header .report-logo-wrap {
+        width: 125px;
+        flex: 0 0 125px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .combined-report-header .report-logo-wrap img {
+        width: 100%;
+        height: auto;
+        max-height: 96px;
+        object-fit: contain;
+      }
+
+      .combined-report-header .report-copy {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .combined-report-header h1 {
+        margin: 0 0 12px;
+        color: var(--ev-text);
+        font-size: clamp(2rem, 4vw, 3.3rem);
+        line-height: 1.05;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+      }
+
+      .combined-report-header p {
+        margin: 7px 0;
+        color: #66738f;
+        font-size: 1.22rem;
+        line-height: 1.25;
+      }
+
+      .combined-report-header p strong {
+        color: #66738f;
+      }
+
+      @media (max-width: 700px) {
+        .combined-report-header {
+          align-items: flex-start;
+          gap: 18px;
+          padding-left: 0;
+          padding-right: 0;
+        }
+        .combined-report-header .report-logo-wrap {
+          width: 86px;
+          flex-basis: 86px;
+        }
+        .combined-report-header h1 {
+          font-size: 2rem;
+        }
+        .combined-report-header p {
+          font-size: 1rem;
+        }
+      }
+
       .upload-guide {
         margin: 0.15rem 0 0.8rem;
         color: var(--ev-muted);
@@ -775,6 +847,14 @@ def build_html_report(
     main {{ max-width: 1180px; margin: 0 auto; padding: 32px; }}
     .card {{ background: white; border: 1px solid #b9dfd8; border-radius: 14px; padding: 24px; margin-bottom: 22px; scroll-margin-top: 90px; }}
     h1, h2 {{ margin-top: 0; }}
+    .combined-header {{ display: flex; align-items: center; gap: 30px; padding: 32px 4px 30px; margin-bottom: 24px; border-top: 1px solid #d7c8e9; border-bottom: 1px solid #d7c8e9; }}
+    .combined-logo {{ width: 130px; flex: 0 0 130px; display: flex; align-items: center; justify-content: center; }}
+    .combined-logo .report-logo {{ max-width: 125px; max-height: 100px; }}
+    .combined-copy {{ flex: 1; min-width: 0; }}
+    .combined-copy h1 {{ margin: 0 0 14px; font-size: 3.1rem; line-height: 1.05; letter-spacing: -0.02em; }}
+    .combined-copy p {{ margin: 7px 0; color: #66738f; font-size: 1.2rem; }}
+    .combined-copy a {{ color: #0b66c3; font-weight: 700; }}
+    @media (max-width: 700px) {{ .combined-header {{ align-items: flex-start; gap: 18px; }} .combined-logo {{ width: 88px; flex-basis: 88px; }} .combined-copy h1 {{ font-size: 2rem; }} }}
     .report-header {{ display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }}
     .report-logo {{ width: auto; max-width: 230px; max-height: 86px; border-radius: 0; }}
     .report-wordmark {{ padding: 18px 24px; border: 2px solid #9370DB; color: #7651c6; font-weight: 850; letter-spacing: .12em; border-radius: 12px; }}
@@ -791,18 +871,14 @@ def build_html_report(
 </head>
 <body>
 <main>
-  <section class="card" id="input-data">
-    <h2 class="section-bar">Input data</h2>
-    <div class="report-header">
-      {report_logo}
-      <div class="report-heading">
-        <a class="upload-link" href="{safe_upload_url}" target="_blank" rel="noopener noreferrer">{UPLOAD_LOCATION_LABEL}</a>
-      </div>
-    </div>
-    <div class="meta">
-      <div><strong>Sample / plate name</strong><br>{escape(plate_name)}</div>
-      <div><strong>Date</strong><br>{report_date}</div>
-      <div><strong>User / analyst</strong><br>{escape(analyst_display)}</div>
+  <section class="combined-header" id="input-data">
+    <div class="combined-logo">{report_logo}</div>
+    <div class="combined-copy">
+      <h1>{escape(plate_name)} &ndash; Combined report</h1>
+      <p><strong>Prepared by:</strong> {escape(analyst_display)}</p>
+      <p><strong>Samples:</strong> {len(results_table)}</p>
+      <p><strong>Generated:</strong> {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}</p>
+      <p><a href="{safe_upload_url}" target="_blank" rel="noopener noreferrer">{UPLOAD_LOCATION_LABEL}</a></p>
     </div>
   </section>
   <section class="card" id="plate-view">
@@ -958,31 +1034,24 @@ if "peak_comparison" in st.session_state:
     results = st.session_state["peak_comparison"]
     comparison = results["comparison"].copy()
 
-    st.markdown("## Combined report preview")
-    st.caption(
-        "Results are grouped by section: input data, plate view, results, peak area, and downloads."
-    )
+    generated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    analyst_display = results["analyst_name"] or "Not specified"
+    sample_count = len(comparison)
+    st.markdown('<div id="input-data" class="section-anchor"></div>', unsafe_allow_html=True)
     st.markdown(
-        """
-        <nav class="preview-nav" aria-label="Report preview sections">
-          <a href="#input-data">Input data</a>
-          <a href="#plate-view">96-well plate</a>
-          <a href="#results-table">Results</a>
-          <a href="#peak-area">Peak area</a>
-          <a href="#download-results">Download</a>
-        </nav>
+        f"""
+        <section class="combined-report-header">
+          <div class="report-logo-wrap">{logo_html}</div>
+          <div class="report-copy">
+            <h1>{escape(results["plate_name"])} &ndash; Combined report</h1>
+            <p><strong>Prepared by:</strong> {escape(analyst_display)}</p>
+            <p><strong>Samples:</strong> {sample_count}</p>
+            <p><strong>Generated:</strong> {generated_at}</p>
+          </div>
+        </section>
         """,
         unsafe_allow_html=True,
     )
-    st.markdown('<div id="input-data" class="section-anchor"></div>', unsafe_allow_html=True)
-    st.markdown(
-        '<div class="purple-section-header">Input data</div>',
-        unsafe_allow_html=True,
-    )
-    input_col1, input_col2, input_col3 = st.columns(3)
-    input_col1.metric("Sample / plate name", results["plate_name"])
-    input_col2.metric("Date", datetime.now().strftime("%Y-%m-%d"))
-    input_col3.metric("User / analyst", results["analyst_name"] or "Not specified")
 
     plate_data = assign_wells(comparison)
 
