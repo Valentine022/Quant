@@ -55,13 +55,17 @@ st.markdown(
     <style>
       :root {
         --ev-bg: #e8f7f5;
-        --ev-panel: #ffffff;
+        --ev-panel: #f9fffe;
+        --ev-card: #ffffff;
         --ev-border: #b9dfd8;
         --ev-text: #1c2434;
         --ev-muted: #667085;
         --ev-purple: #9370DB;
-        --ev-purple-dark: #7651c6;
+        --ev-purple-dark: #9370DB;
         --ev-purple-soft: #f0e8f7;
+        --ev-good: #18794e;
+        --ev-warn: #9a6700;
+        --ev-bad: #b42318;
       }
 
       .stApp {
@@ -76,7 +80,7 @@ st.markdown(
 
       .block-container {
         max-width: 1200px;
-        padding-top: 1rem;
+        padding-top: 5.6rem;
       }
 
       .hero {
@@ -130,7 +134,7 @@ st.markdown(
       }
 
       section[data-testid="stSidebar"] {
-        background: #f9fffe;
+        background: var(--ev-panel);
         border-right: 1px solid var(--ev-border);
       }
 
@@ -140,30 +144,13 @@ st.markdown(
         color: var(--ev-text);
       }
 
-      /* Purple label bars for dropdowns and key controls */
       div[data-testid="stSelectbox"] > label,
       div[data-testid="stNumberInput"] > label,
       div[data-testid="stTextInput"] > label,
       div[data-testid="stFileUploader"] > label {
-        display: inline-block;
-        width: 100%;
-        background: var(--ev-purple);
-        color: white !important;
-        padding: 0.58rem 0.8rem;
-        border-radius: 10px 10px 0 0;
+        color: var(--ev-text) !important;
         font-size: 1rem;
-        font-weight: 750;
-        margin-bottom: 0;
-      }
-
-      div[data-testid="stSelectbox"] > div,
-      div[data-testid="stNumberInput"] > div,
-      div[data-testid="stTextInput"] > div {
-        background: white;
-        border: 1px solid var(--ev-border);
-        border-top: 0;
-        border-radius: 0 0 10px 10px;
-        padding: 0.35rem;
+        font-weight: 650;
       }
 
       div[data-baseweb="select"] > div {
@@ -223,48 +210,52 @@ st.markdown(
       }
 
       .topnav {
-        position: sticky;
+        position: fixed;
         top: 0;
-        z-index: 999;
+        left: 0;
+        right: 0;
+        z-index: 9999;
         display: flex;
+        align-items: center;
         gap: 8px;
         flex-wrap: wrap;
-        margin: 0 -1rem 1.35rem;
-        padding: 12px 1rem;
+        padding: 12px 20px;
+        margin: 0;
         background: var(--ev-purple-soft);
-        border-top: 1px solid #d7c8e9;
         border-bottom: 1px solid var(--ev-border);
         backdrop-filter: blur(8px);
+        
       }
 
       .topnav a {
         display: inline-block;
-        padding: 8px 13px;
+        padding: 8px 12px;
         border-radius: 999px;
         background: var(--ev-purple);
         color: white !important;
         text-decoration: none !important;
-        font-weight: 700;
+        font-weight: 650;
         line-height: 1.2;
       }
 
       .topnav a:hover {
-        background: var(--ev-purple-dark);
+        background: var(--ev-purple);
       }
 
       .section-anchor {
         position: relative;
-        top: -82px;
+        top: -96px;
         visibility: hidden;
       }
 
       .purple-section-header {
         margin: 1.5rem 0 0.85rem;
-        padding: 0.72rem 1rem;
-        border-radius: 12px;
-        background: var(--ev-purple);
-        color: white;
-        font-size: 1.35rem;
+        padding: 0 0 10px;
+        border-radius: 0;
+        border-bottom: 4px solid var(--ev-purple);
+        background: transparent;
+        color: var(--ev-text);
+        font-size: 1.75rem;
         font-weight: 750;
         line-height: 1.2;
       }
@@ -295,6 +286,20 @@ st.markdown(
 )
 
 st.markdown(
+    """
+    <nav class="topnav" aria-label="Page sections">
+      <a href="#settings">Settings</a>
+      <a href="#upload">Upload</a>
+      <a href="#plate-view">96-well plate</a>
+      <a href="#results-table">Results</a>
+      <a href="#peak-area">Peak area</a>
+      <a href="#download-results">Download</a>
+    </nav>
+    """,
+    unsafe_allow_html=True,
+)
+
+st.markdown(
     f"""
     <div class="hero">
       {logo_html}
@@ -306,20 +311,6 @@ st.markdown(
         </p>
       </div>
     </div>
-    """,
-    unsafe_allow_html=True,
-)
-
-st.markdown(
-    """
-    <nav class="topnav" aria-label="Page sections">
-      <a href="#settings">Settings</a>
-      <a href="#upload">Upload</a>
-      <a href="#plate-view">96-well plate</a>
-      <a href="#results-table">Results</a>
-      <a href="#peak-area">Peak area</a>
-      <a href="#download-results">Download</a>
-    </nav>
     """,
     unsafe_allow_html=True,
 )
