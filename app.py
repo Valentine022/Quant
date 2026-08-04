@@ -11,6 +11,8 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import pandas as pd
+import plotly.express as px
+import plotly.io as pio
 import streamlit as st
 
 
@@ -808,6 +810,7 @@ def build_html_report(
     results_table: pd.DataFrame,
     plate_png: bytes,
     peak_area_png: bytes | None,
+    peak_area_html: str | None,
 ) -> str:
     """Build a self-contained HTML report with images embedded as data URIs."""
     report_date = datetime.now().strftime("%Y-%m-%d")
@@ -827,7 +830,13 @@ def build_html_report(
 
     plate_data_uri = "data:image/png;base64," + base64.b64encode(plate_png).decode("ascii")
     peak_area_section = ""
-    if peak_area_png is not None:
+    if peak_area_html:
+        peak_area_section = (
+            '<section class="card" id="peak-area"><h2 class="section-bar">Peak area</h2>'
+            '<p class="chart-help">Hover for sample details. Drag to zoom, double-click to reset, or use the toolbar.</p>'
+            f'<div class="interactive-chart">{peak_area_html}</div></section>'
+        )
+    elif peak_area_png is not None:
         peak_area_data_uri = (
             "data:image/png;base64," + base64.b64encode(peak_area_png).decode("ascii")
         )
@@ -885,6 +894,9 @@ def build_html_report(
     .results-table {{ width: 100%; border-collapse: collapse; font-size: 0.92rem; }}
     .results-table th, .results-table td {{ border-bottom: 1px solid #dce7e5; padding: 9px; text-align: left; }}
     .results-table th {{ background: #9370DB; color: white; }}
+    .chart-help {{ margin: 0 0 12px; color: #667085; }}
+    .interactive-chart {{ width: 100%; min-height: 480px; }}
+    .interactive-chart .plotly-graph-div {{ width: 100% !important; }}
   </style>
 </head>
 <body>
@@ -1161,12 +1173,53 @@ if "peak_comparison" in st.session_state:
 
     plot_data = basic_table.dropna(subset=["Area (mAU·s)"]).copy()
     peak_area_png = None
+    peak_area_html = None
 
     if plot_data.empty:
         st.warning("No matched peak-area values are available to plot.")
     else:
         plot_data["Sample order"] = range(1, len(plot_data) + 1)
 
+        peak_area_plot = px.scatter(
+            plot_data,
+            x="Sample order",
+            y="Area (mAU·s)",
+            hover_data={
+                "Well": True,
+                "Sample name": True,
+                "Sample order": True,
+                "Area (mAU·s)": ":,.3f",
+            },
+            title=(
+                f"{results['plate_name']} — Peak area near "
+                f"{results['target_rt']:.3f} min"
+            ),
+        )
+        peak_area_plot.update_traces(marker={"size": 11})
+        peak_area_plot.update_layout(
+            xaxis_title="Sample order",
+            yaxis_title="Area (mAU·s)",
+            hovermode="closest",
+            margin={"l": 60, "r": 30, "t": 70, "b": 55},
+        )
+        st.plotly_chart(
+            peak_area_plot,
+            use_container_width=True,
+            config={"displaylogo": False, "responsive": True},
+        )
+
+        # Self-contained Plotly fragment for the downloaded HTML report.
+        # include_plotlyjs=True embeds the JavaScript, so the chart works offline.
+        peak_area_html = pio.to_html(
+            peak_area_plot,
+            include_plotlyjs=True,
+            full_html=False,
+            config={"displaylogo": False, "responsive": True},
+            default_width="100%",
+            default_height="520px",
+        )
+
+        # Keep a PNG fallback in the ZIP package.
         peak_area_figure, peak_area_axis = plt.subplots(figsize=(11, 5.5))
         peak_area_axis.scatter(
             plot_data["Sample order"],
@@ -1180,7 +1233,6 @@ if "peak_comparison" in st.session_state:
         )
         peak_area_axis.grid(True, alpha=0.25)
         peak_area_figure.tight_layout()
-        st.pyplot(peak_area_figure, use_container_width=True)
         peak_area_png = figure_to_png_bytes(peak_area_figure)
         plt.close(peak_area_figure)
 
@@ -1228,6 +1280,7 @@ if "peak_comparison" in st.session_state:
         results_table=basic_table,
         plate_png=plate_png,
         peak_area_png=peak_area_png,
+        peak_area_html=peak_area_html,
     )
     html_bytes = report_html.encode("utf-8")
     zip_bytes = make_html_export_zip(
