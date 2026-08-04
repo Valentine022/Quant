@@ -774,9 +774,9 @@ def build_html_report(
   <style>
     body {{ font-family: Arial, sans-serif; margin: 0; background: #e8f7f5; color: #1c2434; }}
     main {{ max-width: 1180px; margin: 0 auto; padding: 32px; }}
-    .report-nav { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 9px; flex-wrap: wrap; padding: 12px 18px; margin-bottom: 22px; background: #f0e8f7; border: 1px solid #d7c8e9; border-radius: 14px; }
-    .report-nav a, .report-nav .selection { display: inline-block; padding: 9px 14px; border-radius: 999px; background: #9370DB; color: white; text-decoration: none; font-weight: 700; }
-    .report-nav .selection { margin-left: auto; background: #7651c6; }
+    .report-nav {{ position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 9px; flex-wrap: wrap; padding: 12px 18px; margin-bottom: 22px; background: #f0e8f7; border: 1px solid #d7c8e9; border-radius: 14px; }}
+    .report-nav a, .report-nav .selection {{ display: inline-block; padding: 9px 14px; border-radius: 999px; background: #9370DB; color: white; text-decoration: none; font-weight: 700; }}
+    .report-nav .selection {{ margin-left: auto; background: #7651c6; }}
     .card {{ background: white; border: 1px solid #b9dfd8; border-radius: 14px; padding: 24px; margin-bottom: 22px; scroll-margin-top: 90px; }}
     h1, h2 {{ margin-top: 0; }}
     .report-header {{ display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }}
