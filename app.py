@@ -739,7 +739,7 @@ def build_html_report(
     peak_area_png: bytes | None,
 ) -> str:
     """Build a self-contained HTML report with images embedded as data URIs."""
-    generated_at = datetime.now().strftime("%Y-%m-%d %H:%M")
+    report_date = datetime.now().strftime("%Y-%m-%d")
     analyst_display = analyst_name.strip() or "Not specified"
     safe_upload_url = upload_location_url.replace('"', '%22')
     if logo_uri:
@@ -774,9 +774,6 @@ def build_html_report(
   <style>
     body {{ font-family: Arial, sans-serif; margin: 0; background: #e8f7f5; color: #1c2434; }}
     main {{ max-width: 1180px; margin: 0 auto; padding: 32px; }}
-    .report-nav {{ position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 9px; flex-wrap: wrap; padding: 12px 18px; margin-bottom: 22px; background: #f0e8f7; border: 1px solid #d7c8e9; border-radius: 14px; }}
-    .report-nav a, .report-nav .selection {{ display: inline-block; padding: 9px 14px; border-radius: 999px; background: #9370DB; color: white; text-decoration: none; font-weight: 700; }}
-    .report-nav .selection {{ margin-left: auto; background: #7651c6; }}
     .card {{ background: white; border: 1px solid #b9dfd8; border-radius: 14px; padding: 24px; margin-bottom: 22px; scroll-margin-top: 90px; }}
     h1, h2 {{ margin-top: 0; }}
     .report-header {{ display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }}
@@ -795,28 +792,18 @@ def build_html_report(
 </head>
 <body>
 <main>
-  <nav class="report-nav" aria-label="Report sections">
-    <a href="#report-summary">Summary</a>
-    <a href="#plate-view">96-well plate</a>
-    <a href="#results-table">Results</a>
-    <a href="#peak-area">Peak area</a>
-    <span class="selection">Selected metric: {escape(plate_metric)}</span>
-  </nav>
-  <section class="card" id="report-summary">
+  <section class="card" id="input-data">
+    <h2 class="section-bar">Input data</h2>
     <div class="report-header">
       {report_logo}
       <div class="report-heading">
-        <h1>{escape(report_title)}</h1>
         <a class="upload-link" href="{safe_upload_url}" target="_blank" rel="noopener noreferrer">{UPLOAD_LOCATION_LABEL}</a>
       </div>
     </div>
     <div class="meta">
       <div><strong>Sample / plate name</strong><br>{escape(plate_name)}</div>
+      <div><strong>Date</strong><br>{report_date}</div>
       <div><strong>User / analyst</strong><br>{escape(analyst_display)}</div>
-      <div><strong>Target retention time</strong><br>{target_rt:.3f} min</div>
-      <div><strong>Matching tolerance</strong><br>±{tolerance:.3f} min</div>
-      <div><strong>Plate colour metric</strong><br>{escape(plate_metric)}</div>
-      <div><strong>Generated</strong><br>{generated_at}</div>
     </div>
   </section>
   <section class="card" id="plate-view">
@@ -979,13 +966,13 @@ if "peak_comparison" in st.session_state:
     comparison = results["comparison"].copy()
 
     st.markdown(
-        f'<div class="purple-section-header">{results["title"]}</div>',
+        '<div class="purple-section-header">Input data</div>',
         unsafe_allow_html=True,
     )
-    st.write(
-        f"Peak nearest to **{results['target_rt']:.3f} min** "
-        f"using a tolerance of **±{results['tolerance']:.3f} min**."
-    )
+    input_col1, input_col2, input_col3 = st.columns(3)
+    input_col1.metric("Sample / plate name", results["plate_name"])
+    input_col2.metric("Date", datetime.now().strftime("%Y-%m-%d"))
+    input_col3.metric("User / analyst", results["analyst_name"] or "Not specified")
 
     plate_data = assign_wells(comparison)
 
