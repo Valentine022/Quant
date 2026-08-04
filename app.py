@@ -524,7 +524,7 @@ st.markdown(
       <div class="hero-text">
         <h1>HPLC Peak Comparison</h1>
         <p>
-          Upload a peak report, generate the comparison, and download one combined report.
+          Upload a peak report, generate the comparison, and download a report.
           Upload the finished report to the shared location.
         </p>
       </div>
